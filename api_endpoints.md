@@ -1,37 +1,86 @@
-# Movie Catalog API
+# API Documentation
 
-## Endpoints
+Все запросы к API проходят через **Spring Boot Service**.
+Base URL: `/` (обычно `http://localhost:8080`)
 
-### Movies
+## Movie Service
 
-| Method | URL                     | Description                   |
-|--------|-------------------------|-------------------------------|
-| GET    | `/api/movies`           | Get all movies                |
-| GET    | `/api/movies/{id}`      | Get movie by ID (`@PathVariable`) |
-| GET    | `/api/movies/search?title=...` | Search movies by title (`@RequestParam`) |
-| POST   | `/api/movies`           | Create a new movie (`@RequestBody`) |
+### Список фильмов
+`GET /api/movies`
 
-### Examples
+Получение списка всех доступных фильмов.
 
-```bash
-# Get all movies
-curl http://localhost:8080/api/movies
+**Response (200 OK):**
+```json
+[
+    {
+        "id": 1,
+        "title": "Inception",
+        "year": 2010,
+        "duration": 148,
+        "viewCount": 0
+    }
+]
+```
 
-# Get movie by ID
-curl http://localhost:8080/api/movies/1
+### Получить фильм
+`GET /api/movies/:id`
 
-# Search by title
-curl "http://localhost:8080/api/movies/search?title=avatar"
+Получение детальной информации о фильме по его ID.
 
-# Create a movie
-curl -X POST -H "Content-Type: application/json" -d '{"title": "Inception", "year": 2010, "duration": 148, "viewCount": 0}' http://localhost:8080/api/movies
+**Response (200 OK):**
+```json
+{
+    "id": 1,
+    "title": "Inception",
+    "year": 2010,
+    "duration": 148,
+    "viewCount": 0
+}
+```
 
-# Response example:
-# {
-#   "id": 1,
-#   "title": "Inception",
-#   "year": 2010,
-#   "duration": 148,
-#   "viewCount": 0
-# }
+### Поиск фильмов
+`GET /api/movies/search`
+
+Поиск фильмов по названию.
+
+**Query Parameters:**
+- `title` (required): Часть названия фильма для поиска.
+
+**Response (200 OK):**
+```json
+[
+    {
+        "id": 1,
+        "title": "Inception",
+        "year": 2010,
+        "duration": 148,
+        "viewCount": 0
+    }
+]
+```
+
+### Создать фильм
+`POST /api/movies`
+
+Добавление нового фильма в каталог.
+
+**Request:**
+```json
+{
+    "title": "Interstellar",
+    "year": 2014,
+    "duration": 169
+}
+```
+
+**Response (200 OK):**
+```json
+{
+    "id": 2,
+    "title": "Interstellar",
+    "year": 2014,
+    "duration": 169,
+    "viewCount": 0
+}
 ```

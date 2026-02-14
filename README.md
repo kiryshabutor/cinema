@@ -33,7 +33,4 @@ mvn spring-boot:run
 
 ## API
 
-- `GET /api/movies` — все фильмы
-- `GET /api/movies/{id}` — фильм по ID
-- `GET /api/movies/search?title=...` — поиск по названию
-- `POST /api/movies` — добавить фильм
+[Полная документация API](api_endpoints.md)
