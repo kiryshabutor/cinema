@@ -3,6 +3,7 @@ package com.moviecat.controller;
 import com.moviecat.dto.MovieDto;
 import com.moviecat.service.MovieService;
 import java.util.List;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -35,7 +36,7 @@ public class MovieController {
     }
 
     @PostMapping
-    public MovieDto create(@RequestBody MovieDto dto) {
+    public MovieDto create(@Valid @RequestBody MovieDto dto) {
         return movieService.create(dto);
     }
 }
