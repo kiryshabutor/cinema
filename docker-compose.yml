@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: moviecat-db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: moviecat_db
+      POSTGRES_USER: moviecat
+      POSTGRES_PASSWORD: moviecat
+    volumes:
+      - moviecat-data:/var/lib/postgresql/data
+
+volumes:
+  moviecat-data:
