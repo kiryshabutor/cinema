@@ -6,3 +6,4 @@ venv
 *.py
 *.docx
 *.docx#
+uploads

@@ -3,43 +3,37 @@ package com.moviecat.dto;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import lombok.AllArgsConstructor;
+import java.util.List;
+import java.util.Set;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.experimental.FieldDefaults;
 
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
-public class MovieDto {  
+@FieldDefaults(level = AccessLevel.PRIVATE)
+public class MovieCreateDto {
 
-    private Long id;
     @NotBlank(message = "Title is required")
-    private String title;
+    String title;
 
     @NotNull(message = "Year is required")
     @Min(value = 1888, message = "Year must be no earlier than 1888")
-    private Integer year;
+    Integer year;
 
     @NotNull(message = "Duration is required")
     @Min(value = 1, message = "Duration must be positive")
-    private Integer duration;
+    Integer duration;
 
     @NotNull(message = "View count is required")
     @Min(value = 0, message = "View count must be non-negative")
-    private Long viewCount;
+    Long viewCount = 0L;
 
-    private String posterUrl;
-
-    private Long directorId;
-    private String directorName;
-
-    private Long studioId;
-    private String studioTitle;
-
-    private java.util.Set<Long> genreIds;
-    private java.util.Set<String> genreNames;
-
-
+    Long directorId;
+    Long studioId;
+    Set<Long> genreIds;
+    List<ReviewDto> reviews;
 }
