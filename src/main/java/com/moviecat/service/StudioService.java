@@ -39,7 +39,8 @@ public class StudioService {
         Studio studio = getById(id);
 
         if (studioRepository.existsByTitleAndIdNot(studioDetails.getTitle(), id)) {
-            throw new ResourceAlreadyExistsException("Studio with title '" + studioDetails.getTitle() + "' already exists");
+            throw new ResourceAlreadyExistsException(
+                    "Studio with title '" + studioDetails.getTitle() + "' already exists");
         }
 
         studio.setTitle(studioDetails.getTitle());

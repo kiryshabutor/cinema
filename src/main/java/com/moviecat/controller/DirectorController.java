@@ -2,7 +2,7 @@ package com.moviecat.controller;
 
 import com.moviecat.dto.DirectorDto;
 import com.moviecat.model.Director;
-import com.moviecat.repository.DirectorRepository;
+
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -35,7 +35,8 @@ public class DirectorController {
     }
 
     @org.springframework.web.bind.annotation.PutMapping("/{id}")
-    public DirectorDto update(@org.springframework.web.bind.annotation.PathVariable Long id, @Valid @RequestBody DirectorDto dto) {
+    public DirectorDto update(@org.springframework.web.bind.annotation.PathVariable Long id,
+                              @Valid @RequestBody DirectorDto dto) {
         Director director = new Director();
         director.setFullName(dto.getFullName());
         Director updated = directorService.update(id, director);

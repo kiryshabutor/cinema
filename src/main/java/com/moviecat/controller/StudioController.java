@@ -2,7 +2,7 @@ package com.moviecat.controller;
 
 import com.moviecat.dto.StudioDto;
 import com.moviecat.model.Studio;
-import com.moviecat.repository.StudioRepository;
+
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -36,7 +36,8 @@ public class StudioController {
     }
 
     @org.springframework.web.bind.annotation.PutMapping("/{id}")
-    public StudioDto update(@org.springframework.web.bind.annotation.PathVariable Long id, @Valid @RequestBody StudioDto dto) {
+    public StudioDto update(@org.springframework.web.bind.annotation.PathVariable Long id,
+                            @Valid @RequestBody StudioDto dto) {
         Studio studio = new Studio();
         studio.setTitle(dto.getTitle());
         studio.setAddress(dto.getAddress());

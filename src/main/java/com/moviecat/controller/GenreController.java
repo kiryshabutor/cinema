@@ -2,7 +2,7 @@ package com.moviecat.controller;
 
 import com.moviecat.dto.GenreDto;
 import com.moviecat.model.Genre;
-import com.moviecat.repository.GenreRepository;
+
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -35,7 +35,8 @@ public class GenreController {
     }
 
     @org.springframework.web.bind.annotation.PutMapping("/{id}")
-    public GenreDto update(@org.springframework.web.bind.annotation.PathVariable Long id, @Valid @RequestBody GenreDto dto) {
+    public GenreDto update(@org.springframework.web.bind.annotation.PathVariable Long id,
+                           @Valid @RequestBody GenreDto dto) {
         Genre genre = new Genre();
         genre.setName(dto.getName());
         Genre updated = genreService.update(id, genre);

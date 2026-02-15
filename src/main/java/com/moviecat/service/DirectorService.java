@@ -29,7 +29,8 @@ public class DirectorService {
     @Transactional
     public Director create(Director director) {
         if (directorRepository.existsByFullName(director.getFullName())) {
-            throw new ResourceAlreadyExistsException("Director with name '" + director.getFullName() + "' already exists");
+            throw new ResourceAlreadyExistsException(
+                    "Director with name '" + director.getFullName() + "' already exists");
         }
         return directorRepository.save(director);
     }
@@ -39,7 +40,8 @@ public class DirectorService {
         Director director = getById(id);
 
         if (directorRepository.existsByFullNameAndIdNot(directorDetails.getFullName(), id)) {
-            throw new ResourceAlreadyExistsException("Director with name '" + directorDetails.getFullName() + "' already exists");
+            throw new ResourceAlreadyExistsException(
+                    "Director with name '" + directorDetails.getFullName() + "' already exists");
         }
 
         director.setFullName(directorDetails.getFullName());
