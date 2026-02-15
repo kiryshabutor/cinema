@@ -17,20 +17,34 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class GenreController {
 
-    private final GenreRepository genreRepository;
+    private final com.moviecat.service.GenreService genreService;
 
     @GetMapping
     public List<GenreDto> getAll() {
-        return genreRepository.findAll().stream()
+        return genreService.getAll().stream()
                 .map(g -> new GenreDto(g.getId(), g.getName()))
                 .toList();
     }
 
     @PostMapping
-    public GenreDto create(@jakarta.validation.Valid @RequestBody GenreDto dto) {
+    public GenreDto create(@Valid @RequestBody GenreDto dto) {
         Genre genre = new Genre();
         genre.setName(dto.getName());
-        Genre saved = genreRepository.save(genre);
+        Genre saved = genreService.create(genre);
         return new GenreDto(saved.getId(), saved.getName());
+    }
+
+    @org.springframework.web.bind.annotation.PutMapping("/{id}")
+    public GenreDto update(@org.springframework.web.bind.annotation.PathVariable Long id, @Valid @RequestBody GenreDto dto) {
+        Genre genre = new Genre();
+        genre.setName(dto.getName());
+        Genre updated = genreService.update(id, genre);
+        return new GenreDto(updated.getId(), updated.getName());
+    }
+
+    @org.springframework.web.bind.annotation.DeleteMapping("/{id}")
+    @org.springframework.web.bind.annotation.ResponseStatus(org.springframework.http.HttpStatus.NO_CONTENT)
+    public void delete(@org.springframework.web.bind.annotation.PathVariable Long id) {
+        genreService.delete(id);
     }
 }

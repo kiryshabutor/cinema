@@ -10,6 +10,12 @@ public interface MovieRepository extends JpaRepository<Movie, Long> {
 
     boolean existsByTitle(String title);
 
+    boolean existsByDirectorId(Long directorId);
+
+    boolean existsByStudioId(Long studioId);
+
+    boolean existsByGenresId(Long genreId);
+
     List<Movie> findByTitleContainingIgnoreCase(String title);
 
     @org.springframework.data.jpa.repository.EntityGraph(attributePaths = "genres")

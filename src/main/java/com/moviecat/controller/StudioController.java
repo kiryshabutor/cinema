@@ -17,21 +17,36 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class StudioController {
 
-    private final StudioRepository studioRepository;
+    private final com.moviecat.service.StudioService studioService;
 
     @GetMapping
     public List<StudioDto> getAll() {
-        return studioRepository.findAll().stream()
+        return studioService.getAll().stream()
                 .map(s -> new StudioDto(s.getId(), s.getTitle(), s.getAddress()))
                 .toList();
     }
 
     @PostMapping
-    public StudioDto create(@jakarta.validation.Valid @RequestBody StudioDto dto) {
+    public StudioDto create(@Valid @RequestBody StudioDto dto) {
         Studio studio = new Studio();
         studio.setTitle(dto.getTitle());
         studio.setAddress(dto.getAddress());
-        Studio saved = studioRepository.save(studio);
+        Studio saved = studioService.create(studio);
         return new StudioDto(saved.getId(), saved.getTitle(), saved.getAddress());
+    }
+
+    @org.springframework.web.bind.annotation.PutMapping("/{id}")
+    public StudioDto update(@org.springframework.web.bind.annotation.PathVariable Long id, @Valid @RequestBody StudioDto dto) {
+        Studio studio = new Studio();
+        studio.setTitle(dto.getTitle());
+        studio.setAddress(dto.getAddress());
+        Studio updated = studioService.update(id, studio);
+        return new StudioDto(updated.getId(), updated.getTitle(), updated.getAddress());
+    }
+
+    @org.springframework.web.bind.annotation.DeleteMapping("/{id}")
+    @org.springframework.web.bind.annotation.ResponseStatus(org.springframework.http.HttpStatus.NO_CONTENT)
+    public void delete(@org.springframework.web.bind.annotation.PathVariable Long id) {
+        studioService.delete(id);
     }
 }

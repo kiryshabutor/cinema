@@ -28,6 +28,17 @@ Base URL: `/` (обычно `http://localhost:8080`)
 ]
 ```
 
+### Поиск фильмов по названию
+`GET /api/movies/search?title={title}`
+
+**Response:**
+Список фильмов, название которых содержит переданную подстроку.
+
+### Получить фильм по ID
+`GET /api/movies/{id}`
+
+**Response:** One `MovieDto` object.
+
 ### Создать фильм
 `POST /api/movies`
 
@@ -43,7 +54,6 @@ Base URL: `/` (обычно `http://localhost:8080`)
     "viewCount": 0
 }
 ```
-
 
 ### Обновить фильм
 `PUT /api/movies/{id}`
@@ -123,24 +133,6 @@ Base URL: `/` (обычно `http://localhost:8080`)
 
 **Response:**
 Возвращает созданный объект `Movie` (без вложенного списка отзывов).
-```json
-{
-    "id": 1,
-    "title": "Inception",
-    "year": 2010,
-    "duration": 148,
-    "viewCount": 0,
-    "posterUrl": null,
-    "directorId": 1,
-    "directorName": "Christopher Nolan",
-    "studioId": 1,
-    "studioTitle": "Warner Bros",
-    "genreIds": [1],
-    "genreNames": ["Sci-Fi"]
-}
-```
-
-
 
 ## Directors
 
@@ -155,6 +147,18 @@ Base URL: `/` (обычно `http://localhost:8080`)
 }
 ```
 
+### Обновить режиссера
+`PUT /api/directors/{id}`
+```json
+{
+  "fullName": "Christopher Nolan Updated"
+}
+```
+
+### Удалить режиссера
+`DELETE /api/directors/{id}`
+**Response:** `204 No Content`
+
 ## Genres
 
 ### Список жанров
@@ -167,6 +171,18 @@ Base URL: `/` (обычно `http://localhost:8080`)
   "name": "Sci-Fi"
 }
 ```
+
+### Обновить жанр
+`PUT /api/genres/{id}`
+```json
+{
+  "name": "Sci-Fi Updated"
+}
+```
+
+### Удалить жанр
+`DELETE /api/genres/{id}`
+**Response:** `204 No Content`
 
 ## Studios
 
@@ -182,6 +198,40 @@ Base URL: `/` (обычно `http://localhost:8080`)
 }
 ```
 
+### Обновить студию
+`PUT /api/studios/{id}`
+```json
+{
+  "title": "Warner Bros Updated",
+  "address": "Burbank, CA"
+}
+```
+
+### Удалить студию
+`DELETE /api/studios/{id}`
+**Response:** `204 No Content`
+
+## Reviews
+
+### Список отзывов
+`GET /api/reviews`
+
+### Список отзывов к фильму
+`GET /api/reviews/movie/{movieId}`
+
+### Создать отзыв
+`POST /api/reviews`
+
+**Request:**
+```json
+{
+  "movieId": 1,
+  "authorAlias": "Critic1",
+  "rating": 8,
+  "comment": "Nice movie!"
+}
+```
+
 ## Demo (N+1 Problem)
 
 ### Проблема N+1 (Плохо)
@@ -191,24 +241,4 @@ Base URL: `/` (обычно `http://localhost:8080`)
 ### Решение N+1 (Хорошо)
 `GET /api/demo/join-fetch`
 Решение проблемы N+1. Вызывает один SELECT запрос с JOIN.
- 
- ## Reviews
- 
- ### Список отзывов
- `GET /api/reviews`
- 
- ### Список отзывов к фильму
-`GET /api/reviews/movie/{movieId}`
 
-### Создать отзыв
- `POST /api/reviews`
- 
- **Request:**
- ```json
- {
-   "movieId": 1,
-   "authorAlias": "Critic1",
-   "rating": 8,
-   "comment": "Nice movie!"
- }
- ```
