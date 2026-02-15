@@ -5,8 +5,11 @@ Base URL: `/` (обычно `http://localhost:8080`)
 
 ## Movies
 
-### Список фильмов
-`GET /api/movies`
+### Список фильмов (с демонстрацией N+1)
+`GET /api/movies?fetchType={type}`
+
+*   `fetchType=eager` (default): Использует оптимизированный запрос (JOIN FETCH). Проблема N+1 решена.
+*   `fetchType=lazy`: Использует стандартный `findAll()`. Демонстрирует проблему N+1 (множество запросов к БД).
 
 **Response (200 OK):**
 ```json
@@ -232,13 +235,5 @@ Base URL: `/` (обычно `http://localhost:8080`)
 }
 ```
 
-## Demo (N+1 Problem)
 
-### Проблема N+1 (Плохо)
-`GET /api/demo/n-plus-one`
-Демонстрация проблемы N+1. Вызывает множество SELECT запросов.
-
-### Решение N+1 (Хорошо)
-`GET /api/demo/join-fetch`
-Решение проблемы N+1. Вызывает один SELECT запрос с JOIN.
 

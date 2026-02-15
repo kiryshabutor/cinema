@@ -27,8 +27,8 @@ public class MovieController {
     private final MovieService movieService;
 
     @GetMapping
-    public List<MovieDto> getAll() {
-        return movieService.getAll();
+    public List<MovieDto> getAll(@RequestParam(required = false, defaultValue = "eager") String fetchType) {
+        return movieService.getAll(fetchType);
     }
 
     @GetMapping("/{id}")

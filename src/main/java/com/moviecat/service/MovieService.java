@@ -47,9 +47,17 @@ public class MovieService {
         return fileUrl;
     }
 
-    public List<MovieDto> getAll() {
-        return movieRepository.findAllWithGenres()
-                .stream()
+    public List<MovieDto> getAll(String fetchType) {
+        List<Movie> movies;
+        if ("lazy".equalsIgnoreCase(fetchType)) {
+            // This will cause N+1 problem because Director and Studio are LAZY
+            // and we are accessing them in the mapper
+            movies = movieRepository.findAll();
+        } else {
+            // This FETCHES everything in one query using EntityGraph
+            movies = movieRepository.findAllWithDetails();
+        }
+        return movies.stream()
                 .map(MovieMapper::toDto)
                 .toList();
     }
