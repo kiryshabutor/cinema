@@ -1,6 +1,7 @@
 package com.moviecat.service;
 
 import com.moviecat.dto.ReviewDto;
+import com.moviecat.exception.ResourceNotFoundException;
 import com.moviecat.mapper.ReviewMapper;
 import com.moviecat.model.Movie;
 import com.moviecat.model.Review;
@@ -39,7 +40,7 @@ public class ReviewService {
         }
         
         Movie movie = movieRepository.findById(dto.getMovieId())
-                .orElseThrow(() -> new RuntimeException("Movie not found with id: " + dto.getMovieId()));
+                .orElseThrow(() -> new ResourceNotFoundException("Movie not found with id: " + dto.getMovieId()));
         
         Review review = ReviewMapper.toEntity(dto);
         review.setId(null);

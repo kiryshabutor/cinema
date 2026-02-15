@@ -2,6 +2,7 @@ package com.moviecat.service;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -19,14 +20,14 @@ public class FileStorageService {
         try {
             Files.createDirectories(uploadDir);
         } catch (IOException e) {
-            throw new RuntimeException("Could not create upload directory", e);
+            throw new UncheckedIOException("Could not create upload directory", e);
         }
     }
 
     public String storeFile(MultipartFile file) {
         try {
             if (file.isEmpty()) {
-                throw new RuntimeException("Failed to store empty file.");
+                throw new IllegalArgumentException("Failed to store empty file.");
             }
 
             String originalFilename = file.getOriginalFilename();
@@ -41,10 +42,9 @@ public class FileStorageService {
             try (InputStream inputStream = file.getInputStream()) {
                 Files.copy(inputStream, destinationFile, StandardCopyOption.REPLACE_EXISTING);
             }
-
             return filename;
         } catch (IOException e) {
-            throw new RuntimeException("Failed to store file.", e);
+            throw new UncheckedIOException("Failed to store file.", e);
         }
     }
 }

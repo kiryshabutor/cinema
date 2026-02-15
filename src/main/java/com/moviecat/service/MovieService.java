@@ -1,6 +1,9 @@
 package com.moviecat.service;
 
 import com.moviecat.dto.MovieDto;
+import com.moviecat.exception.ResourceAlreadyExistsException;
+import com.moviecat.exception.ResourceNotFoundException;
+import com.moviecat.exception.SimulatedFailureException;
 import com.moviecat.mapper.MovieMapper;
 import com.moviecat.model.Director;
 import com.moviecat.model.Genre;
@@ -21,6 +24,10 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class MovieService {
 
+    private static final String MOVIE_NOT_FOUND_MSG = "Movie not found with id: ";
+    private static final String DIRECTOR_NOT_FOUND_MSG = "Director not found";
+    private static final String STUDIO_NOT_FOUND_MSG = "Studio not found";
+
     private final MovieRepository movieRepository;
     private final DirectorRepository directorRepository;
     private final StudioRepository studioRepository;
@@ -29,7 +36,7 @@ public class MovieService {
 
     public String uploadPoster(Long id, org.springframework.web.multipart.MultipartFile file) {
         Movie movie = movieRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Movie not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException(MOVIE_NOT_FOUND_MSG + id));
 
         String filename = fileStorageService.storeFile(file);
         String fileUrl = "/uploads/" + filename;
@@ -49,8 +56,8 @@ public class MovieService {
 
     public MovieDto getById(Long id) {
         Movie movie = movieRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException(
-                        "Movie not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        MOVIE_NOT_FOUND_MSG + id));
         return MovieMapper.toDto(movie);
     }
 
@@ -87,7 +94,7 @@ public class MovieService {
                 review.setMovie(movieEntity);
                 
                 if (failOnPurpose && i == dto.getReviews().size() - 1) {
-                    throw new RuntimeException("Simulated failure during review processing");
+                    throw new SimulatedFailureException("Simulated failure during review processing");
                 }
                 movieEntity.getReviews().add(review);
                 movieRepository.save(movieEntity);
@@ -97,23 +104,21 @@ public class MovieService {
         return MovieMapper.toDto(movieRepository.findById(createdMovie.getId()).orElseThrow());
     }
 
-
-
     private MovieDto createMovieInternal(com.moviecat.dto.MovieCreateDto dto) {
         if (movieRepository.existsByTitle(dto.getTitle())) {
-            throw new RuntimeException("Movie with title '" + dto.getTitle() + "' already exists");
+            throw new ResourceAlreadyExistsException("Movie with title '" + dto.getTitle() + "' already exists");
         }
         Movie movie = MovieMapper.toEntity(dto);
 
         if (dto.getDirectorId() != null) {
             Director director = directorRepository.findById(dto.getDirectorId())
-                    .orElseThrow(() -> new RuntimeException("Director not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException(DIRECTOR_NOT_FOUND_MSG));
             movie.setDirector(director);
         }
 
         if (dto.getStudioId() != null) {
             Studio studio = studioRepository.findById(dto.getStudioId())
-                    .orElseThrow(() -> new RuntimeException("Studio not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException(STUDIO_NOT_FOUND_MSG));
             movie.setStudio(studio);
         }
 
@@ -129,10 +134,10 @@ public class MovieService {
     @Transactional
     public MovieDto update(Long id, MovieDto dto) {
         Movie movie = movieRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Movie not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException(MOVIE_NOT_FOUND_MSG + id));
 
         if (!movie.getTitle().equals(dto.getTitle()) && movieRepository.existsByTitle(dto.getTitle())) {
-            throw new RuntimeException("Movie with title '" + dto.getTitle() + "' already exists");
+            throw new ResourceAlreadyExistsException("Movie with title '" + dto.getTitle() + "' already exists");
         }
 
         movie.setTitle(dto.getTitle());
@@ -142,7 +147,7 @@ public class MovieService {
 
         if (dto.getDirectorId() != null) {
             Director director = directorRepository.findById(dto.getDirectorId())
-                    .orElseThrow(() -> new RuntimeException("Director not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException(DIRECTOR_NOT_FOUND_MSG));
             movie.setDirector(director);
         } else {
             movie.setDirector(null);
@@ -150,7 +155,7 @@ public class MovieService {
 
         if (dto.getStudioId() != null) {
             Studio studio = studioRepository.findById(dto.getStudioId())
-                    .orElseThrow(() -> new RuntimeException("Studio not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException(STUDIO_NOT_FOUND_MSG));
             movie.setStudio(studio);
         } else {
             movie.setStudio(null);
@@ -170,7 +175,7 @@ public class MovieService {
     @Transactional
     public void delete(Long id) {
         if (!movieRepository.existsById(id)) {
-            throw new RuntimeException("Movie not found with id: " + id);
+            throw new ResourceNotFoundException(MOVIE_NOT_FOUND_MSG + id);
         }
         movieRepository.deleteById(id);
     }
@@ -178,19 +183,19 @@ public class MovieService {
     @Transactional
     public MovieDto patch(Long id, com.moviecat.dto.MoviePatchDto dto) {
         Movie movie = movieRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Movie not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException(MOVIE_NOT_FOUND_MSG + id));
 
         MovieMapper.updateEntity(movie, dto);
 
         if (dto.getDirectorId() != null) {
             Director director = directorRepository.findById(dto.getDirectorId())
-                    .orElseThrow(() -> new RuntimeException("Director not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException(DIRECTOR_NOT_FOUND_MSG));
             movie.setDirector(director);
         }
 
         if (dto.getStudioId() != null) {
             Studio studio = studioRepository.findById(dto.getStudioId())
-                    .orElseThrow(() -> new RuntimeException("Studio not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException(STUDIO_NOT_FOUND_MSG));
             movie.setStudio(studio);
         }
 
