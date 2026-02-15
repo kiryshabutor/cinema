@@ -1,4 +1,19 @@
 services:
+  app:
+    build: .
+    container_name: moviecat-app
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./uploads:/app/uploads
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/moviecat_db
+      DB_USERNAME: moviecat
+      DB_PASSWORD: moviecat
+    depends_on:
+      - postgres
+    restart: on-failure
+
   postgres:
     image: postgres:16
     container_name: moviecat-db

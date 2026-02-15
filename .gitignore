@@ -1,8 +1,8 @@
 target
 *.txt
-config
 .env
 venv
 *.py
 *.docx
 *.docx#
+uploads
