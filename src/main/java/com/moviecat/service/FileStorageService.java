@@ -7,6 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -15,6 +16,11 @@ import org.springframework.web.multipart.MultipartFile;
 public class FileStorageService {
 
     private final Path uploadDir = Paths.get("uploads");
+    private static final Set<String> ALLOWED_EXTENSIONS = Set.of(".jpg", ".jpeg", ".png", ".webp", ".gif");
+
+    private boolean isValidExtension(String extension) {
+        return extension != null && ALLOWED_EXTENSIONS.contains(extension.toLowerCase());
+    }
 
     public FileStorageService() {
         try {
@@ -34,6 +40,11 @@ public class FileStorageService {
             String extension = "";
             if (originalFilename != null && originalFilename.contains(".")) {
                 extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+            }
+
+            // Validate extension
+            if (!isValidExtension(extension)) {
+                throw new IllegalArgumentException("Invalid file extension. Allowed extensions: " + ALLOWED_EXTENSIONS);
             }
             
             String filename = UUID.randomUUID().toString() + extension;

@@ -3,7 +3,9 @@ package com.moviecat.controller;
 import com.moviecat.dto.MovieCreateDto;
 import com.moviecat.dto.MovieDto;
 import com.moviecat.service.MovieService;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -71,7 +73,8 @@ public class MovieController {
     }
 
     @PostMapping("/{id}/poster")
-    public String uploadPoster(@PathVariable Long id, @RequestParam("file") MultipartFile file) {
-        return movieService.uploadPoster(id, file);
+    public Map<String, String> uploadPoster(@PathVariable Long id, @RequestParam("file") MultipartFile file) {
+        String fileUrl = movieService.uploadPoster(id, file);
+        return Collections.singletonMap("url", fileUrl);
     }
 }
