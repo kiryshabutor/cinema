@@ -63,6 +63,7 @@ public final class MovieMapper {
         movie.setPosterUrl(dto.getPosterUrl());
         return movie;
     }
+    
     public static void updateEntity(Movie movie, com.moviecat.dto.MoviePatchDto dto) {
         if (dto.getTitle() != null) {
             movie.setTitle(dto.getTitle());

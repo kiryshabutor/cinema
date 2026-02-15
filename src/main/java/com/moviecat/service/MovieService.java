@@ -138,7 +138,7 @@ public class MovieService {
         movie.setTitle(dto.getTitle());
         movie.setYear(dto.getYear());
         movie.setDuration(dto.getDuration());
-        movie.setViewCount(dto.getViewCount()); // Assuming we might want to update this manually? Or keep as is. Usually not updated via DTO but let's allow it for full CRUD.
+        movie.setViewCount(dto.getViewCount());
 
         if (dto.getDirectorId() != null) {
             Director director = directorRepository.findById(dto.getDirectorId())
@@ -180,10 +180,8 @@ public class MovieService {
         Movie movie = movieRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Movie not found with id: " + id));
 
-        // Use mapper for simple fields
         MovieMapper.updateEntity(movie, dto);
 
-        // Handle relationships manually
         if (dto.getDirectorId() != null) {
             Director director = directorRepository.findById(dto.getDirectorId())
                     .orElseThrow(() -> new RuntimeException("Director not found"));

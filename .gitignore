@@ -1,6 +1,5 @@
 target
 *.txt
-config
 .env
 venv
 *.py
