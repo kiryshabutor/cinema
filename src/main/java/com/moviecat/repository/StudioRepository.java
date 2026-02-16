@@ -4,6 +4,9 @@ import com.moviecat.model.Studio;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+/**
+ * Repository for accessing studio data.
+ */
 @Repository
 public interface StudioRepository extends JpaRepository<Studio, Long> {
     boolean existsByTitle(String title);

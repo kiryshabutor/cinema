@@ -2,9 +2,14 @@ package com.moviecat.repository;
 
 import com.moviecat.model.Movie;
 import java.util.List;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+/**
+ * Repository for accessing movie data.
+ */
 @Repository
 public interface MovieRepository extends JpaRepository<Movie, Long> {
 
@@ -18,7 +23,7 @@ public interface MovieRepository extends JpaRepository<Movie, Long> {
 
     List<Movie> findByTitleContainingIgnoreCase(String title);
 
-    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"genres", "director", "studio"})
-    @org.springframework.data.jpa.repository.Query("SELECT m FROM Movie m")
+    @EntityGraph(attributePaths = {"genres", "director", "studio"})
+    @Query("SELECT m FROM Movie m")
     List<Movie> findAllWithDetails();
 }

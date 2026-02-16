@@ -1,13 +1,18 @@
 package com.moviecat.service;
 
+import com.moviecat.dto.MovieCreateDto;
 import com.moviecat.dto.MovieDto;
+import com.moviecat.dto.MoviePatchDto;
+import com.moviecat.dto.ReviewDto;
 import com.moviecat.exception.ResourceAlreadyExistsException;
 import com.moviecat.exception.ResourceNotFoundException;
 import com.moviecat.exception.SimulatedFailureException;
 import com.moviecat.mapper.MovieMapper;
+import com.moviecat.mapper.ReviewMapper;
 import com.moviecat.model.Director;
 import com.moviecat.model.Genre;
 import com.moviecat.model.Movie;
+import com.moviecat.model.Review;
 import com.moviecat.model.Studio;
 import com.moviecat.repository.DirectorRepository;
 import com.moviecat.repository.GenreRepository;
@@ -19,6 +24,7 @@ import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @RequiredArgsConstructor
@@ -34,7 +40,7 @@ public class MovieService {
     private final GenreRepository genreRepository;
     private final FileStorageService fileStorageService;
 
-    public String uploadPoster(Long id, org.springframework.web.multipart.MultipartFile file) {
+    public String uploadPoster(Long id, MultipartFile file) {
         Movie movie = movieRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(MOVIE_NOT_FOUND_MSG + id));
 
@@ -50,11 +56,8 @@ public class MovieService {
     public List<MovieDto> getAll(String fetchType) {
         List<Movie> movies;
         if ("lazy".equalsIgnoreCase(fetchType)) {
-            // This will cause N+1 problem because Director and Studio are LAZY
-            // and we are accessing them in the mapper
             movies = movieRepository.findAll();
         } else {
-            // This FETCHES everything in one query using EntityGraph
             movies = movieRepository.findAllWithDetails();
         }
         return movies.stream()
@@ -77,26 +80,26 @@ public class MovieService {
     }
 
     @Transactional
-    public MovieDto create(com.moviecat.dto.MovieCreateDto dto) {
+    public MovieDto create(MovieCreateDto dto) {
         return createMovieInternal(dto);
     }
 
     @Transactional
-    public MovieDto createWithReviewsTransactional(com.moviecat.dto.MovieCreateDto dto, boolean failOnPurpose) {
+    public MovieDto createWithReviewsTransactional(MovieCreateDto dto, boolean failOnPurpose) {
         return createMovieWithReviewsInternal(dto, failOnPurpose);
     }
 
-    public MovieDto createWithReviewsNonTransactional(com.moviecat.dto.MovieCreateDto dto, boolean failOnPurpose) {
+    public MovieDto createWithReviewsNonTransactional(MovieCreateDto dto, boolean failOnPurpose) {
         return createMovieWithReviewsInternal(dto, failOnPurpose);
     }
 
-    private MovieDto createMovieWithReviewsInternal(com.moviecat.dto.MovieCreateDto dto, boolean failOnPurpose) {
+    private MovieDto createMovieWithReviewsInternal(MovieCreateDto dto, boolean failOnPurpose) {
         MovieDto createdMovie = createMovieInternal(dto);
         
         if (dto.getReviews() != null) {
             for (int i = 0; i < dto.getReviews().size(); i++) {
-                com.moviecat.dto.ReviewDto reviewDto = dto.getReviews().get(i);
-                com.moviecat.model.Review review = com.moviecat.mapper.ReviewMapper.toEntity(reviewDto);
+                ReviewDto reviewDto = dto.getReviews().get(i);
+                Review review = ReviewMapper.toEntity(reviewDto);
                 
                 Movie movieEntity = movieRepository.findById(createdMovie.getId()).orElseThrow();
                 review.setMovie(movieEntity);
@@ -112,7 +115,7 @@ public class MovieService {
         return MovieMapper.toDto(movieRepository.findById(createdMovie.getId()).orElseThrow());
     }
 
-    private MovieDto createMovieInternal(com.moviecat.dto.MovieCreateDto dto) {
+    private MovieDto createMovieInternal(MovieCreateDto dto) {
         if (movieRepository.existsByTitle(dto.getTitle())) {
             throw new ResourceAlreadyExistsException("Movie with title '" + dto.getTitle() + "' already exists");
         }
@@ -189,7 +192,7 @@ public class MovieService {
     }
 
     @Transactional
-    public MovieDto patch(Long id, com.moviecat.dto.MoviePatchDto dto) {
+    public MovieDto patch(Long id, MoviePatchDto dto) {
         Movie movie = movieRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(MOVIE_NOT_FOUND_MSG + id));
 

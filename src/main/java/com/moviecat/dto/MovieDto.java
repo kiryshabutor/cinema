@@ -3,6 +3,7 @@ package com.moviecat.dto;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import java.util.Set;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -20,6 +21,7 @@ public class MovieDto {
 
     @NotNull(message = "Year is required")
     @Min(value = 1888, message = "Year must be no earlier than 1888")
+    @Max(value = 2027, message = "Year must be no later than 2027")
     private Integer year;
 
     @NotNull(message = "Duration is required")
@@ -38,8 +40,6 @@ public class MovieDto {
     private Long studioId;
     private String studioTitle;
 
-    private java.util.Set<Long> genreIds;
-    private java.util.Set<String> genreNames;
-
-
+    private Set<Long> genreIds;
+    private Set<String> genreNames;
 }

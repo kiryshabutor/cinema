@@ -1,21 +1,21 @@
 package com.moviecat.service;
 
-import com.moviecat.model.Studio;
-import com.moviecat.repository.StudioRepository;
-import com.moviecat.exception.ResourceNotFoundException;
 import com.moviecat.exception.ResourceAlreadyExistsException;
+import com.moviecat.exception.ResourceNotFoundException;
+import com.moviecat.model.Studio;
+import com.moviecat.repository.MovieRepository;
+import com.moviecat.repository.StudioRepository;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class StudioService {
 
     private final StudioRepository studioRepository;
-    private final com.moviecat.repository.MovieRepository movieRepository;
+    private final MovieRepository movieRepository;
 
     public List<Studio> getAll() {
         return studioRepository.findAll();

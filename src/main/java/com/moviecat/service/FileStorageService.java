@@ -42,7 +42,6 @@ public class FileStorageService {
                 extension = originalFilename.substring(originalFilename.lastIndexOf("."));
             }
 
-            // Validate extension
             if (!isValidExtension(extension)) {
                 throw new IllegalArgumentException("Invalid file extension. Allowed extensions: " + ALLOWED_EXTENSIONS);
             }

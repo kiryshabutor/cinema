@@ -17,6 +17,7 @@ public class MoviePatchDto {
     String title;
 
     @Min(value = 1888, message = "Year must be no earlier than 1888")
+    @Max(value = 2027, message = "Year must be no later than 2027")
     Integer year;
 
     @Min(value = 1, message = "Duration must be positive")

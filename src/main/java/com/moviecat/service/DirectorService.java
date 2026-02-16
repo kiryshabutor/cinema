@@ -1,21 +1,21 @@
 package com.moviecat.service;
 
+import com.moviecat.exception.ResourceAlreadyExistsException;
+import com.moviecat.exception.ResourceNotFoundException;
 import com.moviecat.model.Director;
 import com.moviecat.repository.DirectorRepository;
-import com.moviecat.exception.ResourceNotFoundException;
-import com.moviecat.exception.ResourceAlreadyExistsException;
+import com.moviecat.repository.MovieRepository;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class DirectorService {
 
     private final DirectorRepository directorRepository;
-    private final com.moviecat.repository.MovieRepository movieRepository;
+    private final MovieRepository movieRepository;
 
     public List<Director> getAll() {
         return directorRepository.findAll();

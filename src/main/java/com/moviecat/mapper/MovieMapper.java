@@ -2,7 +2,11 @@ package com.moviecat.mapper;
 
 import com.moviecat.dto.MovieCreateDto;
 import com.moviecat.dto.MovieDto;
+import com.moviecat.dto.MoviePatchDto;
+import com.moviecat.model.Genre;
 import com.moviecat.model.Movie;
+import java.util.HashSet;
+import java.util.Set;
 
 public final class MovieMapper {
 
@@ -29,17 +33,15 @@ public final class MovieMapper {
         }
 
         if (movie.getGenres() != null) {
-            java.util.Set<Long> genreIds = new java.util.HashSet<>();
-            java.util.Set<String> genreNames = new java.util.HashSet<>();
-            for (com.moviecat.model.Genre genre : movie.getGenres()) {
+            Set<Long> genreIds = new HashSet<>();
+            Set<String> genreNames = new HashSet<>();
+            for (Genre genre : movie.getGenres()) {
                 genreIds.add(genre.getId());
                 genreNames.add(genre.getName());
             }
             dto.setGenreIds(genreIds);
             dto.setGenreNames(genreNames);
         }
-
-
 
         return dto;
     }
@@ -64,7 +66,7 @@ public final class MovieMapper {
         return movie;
     }
     
-    public static void updateEntity(Movie movie, com.moviecat.dto.MoviePatchDto dto) {
+    public static void updateEntity(Movie movie, MoviePatchDto dto) {
         if (dto.getTitle() != null) {
             movie.setTitle(dto.getTitle());
         }

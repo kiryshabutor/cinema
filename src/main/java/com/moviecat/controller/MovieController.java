@@ -2,14 +2,16 @@ package com.moviecat.controller;
 
 import com.moviecat.dto.MovieCreateDto;
 import com.moviecat.dto.MovieDto;
+import com.moviecat.dto.MoviePatchDto;
 import com.moviecat.service.MovieService;
+import jakarta.validation.Valid;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -62,8 +64,8 @@ public class MovieController {
         return movieService.update(id, dto);
     }
 
-    @org.springframework.web.bind.annotation.PatchMapping("/{id}")
-    public MovieDto patch(@PathVariable Long id, @Valid @RequestBody com.moviecat.dto.MoviePatchDto dto) {
+    @PatchMapping("/{id}")
+    public MovieDto patch(@PathVariable Long id, @Valid @RequestBody MoviePatchDto dto) {
         return movieService.patch(id, dto);
     }
 

@@ -2,10 +2,11 @@ package com.moviecat.controller;
 
 import com.moviecat.dto.ReviewDto;
 import com.moviecat.service.ReviewService;
-import java.util.List;
 import jakarta.validation.Valid;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -24,7 +25,7 @@ public class ReviewController {
     }
 
     @GetMapping("/movie/{movieId}")
-    public List<ReviewDto> getByMovieId(@org.springframework.web.bind.annotation.PathVariable Long movieId) {
+    public List<ReviewDto> getByMovieId(@PathVariable Long movieId) {
         return reviewService.getByMovieId(movieId);
     }
 
