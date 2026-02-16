@@ -1,5 +1,6 @@
 package com.moviecat.dto;
 
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import java.util.Set;
 import lombok.AccessLevel;

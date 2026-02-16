@@ -5,6 +5,8 @@ import com.moviecat.service.ReviewService;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -20,17 +22,17 @@ public class ReviewController {
     private final ReviewService reviewService;
 
     @GetMapping
-    public List<ReviewDto> getAll() {
-        return reviewService.getAll();
+    public ResponseEntity<List<ReviewDto>> getAll() {
+        return ResponseEntity.ok(reviewService.getAll());
     }
 
     @GetMapping("/movie/{movieId}")
-    public List<ReviewDto> getByMovieId(@PathVariable Long movieId) {
-        return reviewService.getByMovieId(movieId);
+    public ResponseEntity<List<ReviewDto>> getByMovieId(@PathVariable Long movieId) {
+        return ResponseEntity.ok(reviewService.getByMovieId(movieId));
     }
 
     @PostMapping
-    public ReviewDto create(@Valid @RequestBody ReviewDto dto) {
-        return reviewService.create(dto);
+    public ResponseEntity<ReviewDto> create(@Valid @RequestBody ReviewDto dto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(reviewService.create(dto));
     }
 }

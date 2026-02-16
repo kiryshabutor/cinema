@@ -9,6 +9,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -29,54 +31,55 @@ public class MovieController {
     private final MovieService movieService;
 
     @GetMapping
-    public List<MovieDto> getAll(@RequestParam(required = false, defaultValue = "eager") String fetchType) {
-        return movieService.getAll(fetchType);
+    public ResponseEntity<List<MovieDto>> getAll(@RequestParam(required = false, defaultValue = "eager") String fetchType) {
+        return ResponseEntity.ok(movieService.getAll(fetchType));
     }
 
     @GetMapping("/{id}")
-    public MovieDto getById(@PathVariable Long id) {
-        return movieService.getById(id);
+    public ResponseEntity<MovieDto> getById(@PathVariable Long id) {
+        return ResponseEntity.ok(movieService.getById(id));
     }
 
     @GetMapping("/search")
-    public List<MovieDto> searchByTitle(@RequestParam String title) {
-        return movieService.searchByTitle(title);
+    public ResponseEntity<List<MovieDto>> searchByTitle(@RequestParam String title) {
+        return ResponseEntity.ok(movieService.searchByTitle(title));
     }
 
     @PostMapping
-    public MovieDto create(@Valid @RequestBody MovieCreateDto dto) {
-        return movieService.create(dto);
+    public ResponseEntity<MovieDto> create(@Valid @RequestBody MovieCreateDto dto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(movieService.create(dto));
     }
 
     @PostMapping("/with-reviews")
-    public MovieDto createWithReviews(@Valid @RequestBody MovieCreateDto dto, 
+    public ResponseEntity<MovieDto> createWithReviews(@Valid @RequestBody MovieCreateDto dto,
                                       @RequestParam(defaultValue = "false") boolean fail,
                                       @RequestParam(defaultValue = "true") boolean transactional) {
         if (transactional) {
-            return movieService.createWithReviewsTransactional(dto, fail);
+            return ResponseEntity.status(HttpStatus.CREATED).body(movieService.createWithReviewsTransactional(dto, fail));
         } else {
-            return movieService.createWithReviewsNonTransactional(dto, fail);
+            return ResponseEntity.status(HttpStatus.CREATED).body(movieService.createWithReviewsNonTransactional(dto, fail));
         }
     }
 
     @PutMapping("/{id}")
-    public MovieDto update(@PathVariable Long id, @Valid @RequestBody MovieDto dto) {
-        return movieService.update(id, dto);
+    public ResponseEntity<MovieDto> update(@PathVariable Long id, @Valid @RequestBody MovieDto dto) {
+        return ResponseEntity.ok(movieService.update(id, dto));
     }
 
     @PatchMapping("/{id}")
-    public MovieDto patch(@PathVariable Long id, @Valid @RequestBody MoviePatchDto dto) {
-        return movieService.patch(id, dto);
+    public ResponseEntity<MovieDto> patch(@PathVariable Long id, @Valid @RequestBody MoviePatchDto dto) {
+        return ResponseEntity.ok(movieService.patch(id, dto));
     }
 
     @DeleteMapping("/{id}")
-    public void delete(@PathVariable Long id) {
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
         movieService.delete(id);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{id}/poster")
-    public Map<String, String> uploadPoster(@PathVariable Long id, @RequestParam("file") MultipartFile file) {
+    public ResponseEntity<Map<String, String>> uploadPoster(@PathVariable Long id, @RequestParam("file") MultipartFile file) {
         String fileUrl = movieService.uploadPoster(id, file);
-        return Collections.singletonMap("url", fileUrl);
+        return ResponseEntity.ok(Collections.singletonMap("url", fileUrl));
     }
 }

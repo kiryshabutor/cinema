@@ -34,13 +34,13 @@ Base URL: `/` (обычно `http://localhost:8080`)
 ### Поиск фильмов по названию
 `GET /api/movies/search?title={title}`
 
-**Response:**
+**Response (201 Created):**
 Список фильмов, название которых содержит переданную подстроку.
 
 ### Получить фильм по ID
 `GET /api/movies/{id}`
 
-**Response:** One `MovieDto` object.
+**Response (201 Created):** One `MovieDto` object.
 
 ### Создать фильм
 `POST /api/movies`
@@ -107,7 +107,7 @@ Base URL: `/` (обычно `http://localhost:8080`)
 **Request (multipart/form-data):**
 *   `file`: Файл изображения
 
-**Response:**
+**Response (201 Created):**
 *   Строка с URL загруженного файла (например, `/uploads/uuid.jpg`).
 
 ### Создать фильм с отзывами
@@ -134,7 +134,7 @@ Base URL: `/` (обычно `http://localhost:8080`)
 }
 ```
 
-**Response:**
+**Response (201 Created):**
 Возвращает созданный объект `Movie` (без вложенного списка отзывов).
 
 ## Directors
@@ -160,7 +160,7 @@ Base URL: `/` (обычно `http://localhost:8080`)
 
 ### Удалить режиссера
 `DELETE /api/directors/{id}`
-**Response:** `204 No Content`
+**Response (201 Created):** `204 No Content`
 
 ## Genres
 
@@ -185,7 +185,7 @@ Base URL: `/` (обычно `http://localhost:8080`)
 
 ### Удалить жанр
 `DELETE /api/genres/{id}`
-**Response:** `204 No Content`
+**Response (201 Created):** `204 No Content`
 
 ## Studios
 
@@ -212,7 +212,7 @@ Base URL: `/` (обычно `http://localhost:8080`)
 
 ### Удалить студию
 `DELETE /api/studios/{id}`
-**Response:** `204 No Content`
+**Response (201 Created):** `204 No Content`
 
 ## Reviews
 
