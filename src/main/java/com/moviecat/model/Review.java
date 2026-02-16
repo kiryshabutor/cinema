@@ -13,9 +13,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-/**
- * Entity representing a movie review.
- */
 @Entity
 @Table(name = "reviews")
 @Getter

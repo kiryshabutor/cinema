@@ -14,9 +14,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-/**
- * Entity representing a movie director.
- */
 @Entity
 @Table(name = "directors")
 @Getter

@@ -14,9 +14,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-/**
- * Entity representing a movie studio.
- */
 @Entity
 @Table(name = "studios")
 @Getter
