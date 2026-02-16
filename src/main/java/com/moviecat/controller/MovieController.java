@@ -31,7 +31,8 @@ public class MovieController {
     private final MovieService movieService;
 
     @GetMapping
-    public ResponseEntity<List<MovieDto>> getAll(@RequestParam(required = false, defaultValue = "eager") String fetchType) {
+    public ResponseEntity<List<MovieDto>> getAll(
+        @RequestParam(required = false, defaultValue = "eager") String fetchType) {
         return ResponseEntity.ok(movieService.getAll(fetchType));
     }
 
@@ -55,9 +56,11 @@ public class MovieController {
                                       @RequestParam(defaultValue = "false") boolean fail,
                                       @RequestParam(defaultValue = "true") boolean transactional) {
         if (transactional) {
-            return ResponseEntity.status(HttpStatus.CREATED).body(movieService.createWithReviewsTransactional(dto, fail));
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(movieService.createWithReviewsTransactional(dto, fail));
         } else {
-            return ResponseEntity.status(HttpStatus.CREATED).body(movieService.createWithReviewsNonTransactional(dto, fail));
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(movieService.createWithReviewsNonTransactional(dto, fail));
         }
     }
 
@@ -78,7 +81,9 @@ public class MovieController {
     }
 
     @PostMapping("/{id}/poster")
-    public ResponseEntity<Map<String, String>> uploadPoster(@PathVariable Long id, @RequestParam("file") MultipartFile file) {
+    public ResponseEntity<Map<String, String>> uploadPoster(
+            @PathVariable Long id, 
+            @RequestParam("file") MultipartFile file) {
         String fileUrl = movieService.uploadPoster(id, file);
         return ResponseEntity.ok(Collections.singletonMap("url", fileUrl));
     }

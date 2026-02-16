@@ -37,7 +37,8 @@ public class StudioController {
         studio.setTitle(dto.getTitle());
         studio.setAddress(dto.getAddress());
         Studio saved = studioService.create(studio);
-        return ResponseEntity.status(HttpStatus.CREATED).body(new StudioDto(saved.getId(), saved.getTitle(), saved.getAddress()));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new StudioDto(saved.getId(), saved.getTitle(), saved.getAddress()));
     }
 
     @PutMapping("/{id}")
