@@ -18,10 +18,16 @@ import com.moviecat.repository.DirectorRepository;
 import com.moviecat.repository.GenreRepository;
 import com.moviecat.repository.MovieRepository;
 import com.moviecat.repository.StudioRepository;
+import com.moviecat.dto.MovieSearchCriteria;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -40,6 +46,8 @@ public class MovieService {
     private final GenreRepository genreRepository;
     private final FileStorageService fileStorageService;
 
+    private final Map<MovieSearchCriteria, Page<MovieDto>> searchCache = new ConcurrentHashMap<>();
+
     public String uploadPoster(Long id, MultipartFile file) {
         Movie movie = movieRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(MOVIE_NOT_FOUND_MSG + id));
@@ -49,6 +57,7 @@ public class MovieService {
         
         movie.setPosterUrl(fileUrl);
         movieRepository.save(movie);
+        invalidateCache();
         
         return fileUrl;
     }
@@ -112,6 +121,7 @@ public class MovieService {
             }
         }
         
+        invalidateCache();
         return MovieMapper.toDto(movieRepository.findById(createdMovie.getId()).orElseThrow());
     }
 
@@ -139,6 +149,7 @@ public class MovieService {
         }
 
         Movie savedMovie = movieRepository.save(movie);
+        invalidateCache();
         return MovieMapper.toDto(savedMovie);
     }
 
@@ -180,6 +191,7 @@ public class MovieService {
         }
 
         Movie updatedMovie = movieRepository.save(movie);
+        invalidateCache();
         return MovieMapper.toDto(updatedMovie);
     }
 
@@ -189,6 +201,7 @@ public class MovieService {
             throw new ResourceNotFoundException(MOVIE_NOT_FOUND_MSG + id);
         }
         movieRepository.deleteById(id);
+        invalidateCache();
     }
 
     @Transactional
@@ -216,6 +229,42 @@ public class MovieService {
         }
 
         Movie updatedMovie = movieRepository.save(movie);
+        invalidateCache();
         return MovieMapper.toDto(updatedMovie);
+    }
+
+    public Page<MovieDto> search(MovieSearchCriteria criteria, boolean useNative) {
+        if (searchCache.containsKey(criteria)) {
+            return searchCache.get(criteria);
+        }
+
+        Pageable pageable = PageRequest.of(criteria.page(), criteria.size());
+        Page<Movie> movies;
+
+        if (useNative) {
+            movies = movieRepository.findAllByCriteriaNative(
+                criteria.title(),
+                criteria.directorName(),
+                criteria.studioTitle(),
+                criteria.genreName(),
+                pageable
+            );
+        } else {
+            movies = movieRepository.findAllByCriteria(
+                criteria.title(),
+                criteria.directorName(),
+                criteria.studioTitle(),
+                criteria.genreName(),
+                pageable
+            );
+        }
+
+        Page<MovieDto> dtoPage = movies.map(MovieMapper::toDto);
+        searchCache.put(criteria, dtoPage);
+        return dtoPage;
+    }
+
+    private void invalidateCache() {
+        searchCache.clear();
     }
 }

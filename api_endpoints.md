@@ -31,11 +31,66 @@ Base URL: `/` (обычно `http://localhost:8080`)
 ]
 ```
 
-### Поиск фильмов по названию
-`GET /api/movies/search?title={title}`
+### Расширенный поиск фильмов
+`GET /api/movies/search`
 
-**Response (201 Created):**
-Список фильмов, название которых содержит переданную подстроку.
+Позволяет искать фильмы по различным критериям с пагинацией. Результаты кэшируются (in-memory).
+
+**Параметры запроса:**
+*   `title` (optional): Частичное совпадение названия фильма.
+*   `directorName` (optional): Частичное совпадение имени режиссера.
+*   `studioTitle` (optional): Частичное совпадение названия студии.
+*   `genreName` (optional): Полное совпадение названия жанра.
+*   `page` (optional, default=0): Номер страницы (начиная с 0).
+*   `size` (optional, default=10): Количество элементов на странице.
+*   `useNative` (optional, default=false): `true` для использования Native SQL, `false` для JPQL.
+
+**Response (200 OK):**
+Возвращает объект `Page<MovieDto>`.
+
+```json
+{
+  "content": [
+    {
+      "id": 1,
+      "title": "Inception",
+      "year": 2010,
+      "duration": 148,
+      "directorId": 1,
+      "directorName": "Christopher Nolan",
+      "studioId": 1,
+      "studioTitle": "Warner Bros",
+      "genreIds": [1],
+      "genreNames": ["Sci-Fi"]
+    }
+  ],
+  "pageable": {
+    "pageNumber": 0,
+    "pageSize": 10,
+    "sort": {
+      "empty": true,
+      "sorted": false,
+      "unsorted": true
+    },
+    "offset": 0,
+    "paged": true,
+    "unpaged": false
+  },
+  "last": true,
+  "totalPages": 1,
+  "totalElements": 1,
+  "first": true,
+  "size": 10,
+  "number": 0,
+  "sort": {
+    "empty": true,
+    "sorted": false,
+    "unsorted": true
+  },
+  "numberOfElements": 1,
+  "empty": false
+}
+```
 
 ### Получить фильм по ID
 `GET /api/movies/{id}`

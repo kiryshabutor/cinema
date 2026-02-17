@@ -3,7 +3,9 @@ package com.moviecat.controller;
 import com.moviecat.dto.MovieCreateDto;
 import com.moviecat.dto.MovieDto;
 import com.moviecat.dto.MoviePatchDto;
+import com.moviecat.dto.MovieSearchCriteria;
 import com.moviecat.service.MovieService;
+import org.springframework.data.domain.Page;
 import jakarta.validation.Valid;
 import java.util.Collections;
 import java.util.List;
@@ -42,8 +44,17 @@ public class MovieController {
     }
 
     @GetMapping("/search")
-    public ResponseEntity<List<MovieDto>> searchByTitle(@RequestParam String title) {
-        return ResponseEntity.ok(movieService.searchByTitle(title));
+    public ResponseEntity<Page<MovieDto>> search(
+            @RequestParam(required = false) String title,
+            @RequestParam(required = false) String directorName,
+            @RequestParam(required = false) String studioTitle,
+            @RequestParam(required = false) String genreName,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "false") boolean useNative) {
+        
+        MovieSearchCriteria criteria = new MovieSearchCriteria(title, directorName, studioTitle, genreName, page, size);
+        return ResponseEntity.ok(movieService.search(criteria, useNative));
     }
 
     @PostMapping
