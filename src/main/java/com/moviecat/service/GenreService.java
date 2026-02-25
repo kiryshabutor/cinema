@@ -7,6 +7,7 @@ import com.moviecat.repository.GenreRepository;
 import com.moviecat.repository.MovieRepository;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,7 +22,7 @@ public class GenreService {
         return genreRepository.findAll();
     }
 
-    public Genre getById(Long id) {
+    public Genre getById(@NonNull Long id) {
         return genreRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Genre not found with id: " + id));
     }
@@ -35,7 +36,7 @@ public class GenreService {
     }
 
     @Transactional
-    public Genre update(Long id, Genre genreDetails) {
+    public Genre update(@NonNull Long id, Genre genreDetails) {
         Genre genre = getById(id);
 
         if (genreRepository.existsByNameAndIdNot(genreDetails.getName(), id)) {
@@ -47,7 +48,7 @@ public class GenreService {
     }
 
     @Transactional
-    public void delete(Long id) {
+    public void delete(@NonNull Long id) {
         if (!genreRepository.existsById(id)) {
             throw new ResourceNotFoundException("Genre not found with id: " + id);
         }

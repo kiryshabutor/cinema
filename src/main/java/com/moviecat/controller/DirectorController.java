@@ -8,6 +8,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -40,7 +41,7 @@ public class DirectorController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<DirectorDto> update(@PathVariable Long id, @Valid @RequestBody DirectorDto dto) {
+    public ResponseEntity<DirectorDto> update(@PathVariable @NonNull Long id, @Valid @RequestBody DirectorDto dto) {
         Director director = new Director();
         director.setFullName(dto.getFullName());
         Director updated = directorService.update(id, director);
@@ -48,7 +49,7 @@ public class DirectorController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
+    public ResponseEntity<Void> delete(@PathVariable @NonNull Long id) {
         directorService.delete(id);
         return ResponseEntity.noContent().build();
     }

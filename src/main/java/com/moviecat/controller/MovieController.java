@@ -11,6 +11,7 @@ import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -37,7 +38,7 @@ public class MovieController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<MovieDto> getById(@PathVariable Long id) {
+    public ResponseEntity<MovieDto> getById(@PathVariable @NonNull Long id) {
         return ResponseEntity.ok(movieService.getById(id));
     }
 
@@ -65,24 +66,24 @@ public class MovieController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<MovieDto> update(@PathVariable Long id, @Valid @RequestBody MovieDto dto) {
+    public ResponseEntity<MovieDto> update(@PathVariable @NonNull Long id, @Valid @RequestBody MovieDto dto) {
         return ResponseEntity.ok(movieService.update(id, dto));
     }
 
     @PatchMapping("/{id}")
-    public ResponseEntity<MovieDto> patch(@PathVariable Long id, @Valid @RequestBody MoviePatchDto dto) {
+    public ResponseEntity<MovieDto> patch(@PathVariable @NonNull Long id, @Valid @RequestBody MoviePatchDto dto) {
         return ResponseEntity.ok(movieService.patch(id, dto));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
+    public ResponseEntity<Void> delete(@PathVariable @NonNull Long id) {
         movieService.delete(id);
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{id}/poster")
     public ResponseEntity<Map<String, String>> uploadPoster(
-            @PathVariable Long id, 
+            @PathVariable @NonNull Long id,
             @RequestParam("file") MultipartFile file) {
         String fileUrl = movieService.uploadPoster(id, file);
         return ResponseEntity.ok(Collections.singletonMap("url", fileUrl));

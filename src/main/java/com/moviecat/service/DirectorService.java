@@ -7,6 +7,7 @@ import com.moviecat.repository.DirectorRepository;
 import com.moviecat.repository.MovieRepository;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,7 +22,7 @@ public class DirectorService {
         return directorRepository.findAll();
     }
 
-    public Director getById(Long id) {
+    public Director getById(@NonNull Long id) {
         return directorRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Director not found with id: " + id));
     }
@@ -36,7 +37,7 @@ public class DirectorService {
     }
 
     @Transactional
-    public Director update(Long id, Director directorDetails) {
+    public Director update(@NonNull Long id, Director directorDetails) {
         Director director = getById(id);
 
         if (directorRepository.existsByFullNameAndIdNot(directorDetails.getFullName(), id)) {
@@ -49,7 +50,7 @@ public class DirectorService {
     }
 
     @Transactional
-    public void delete(Long id) {
+    public void delete(@NonNull Long id) {
         if (!directorRepository.existsById(id)) {
             throw new ResourceNotFoundException("Director not found with id: " + id);
         }

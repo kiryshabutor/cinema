@@ -20,8 +20,10 @@ import com.moviecat.repository.MovieRepository;
 import com.moviecat.repository.StudioRepository;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -40,7 +42,7 @@ public class MovieService {
     private final GenreRepository genreRepository;
     private final FileStorageService fileStorageService;
 
-    public String uploadPoster(Long id, MultipartFile file) {
+    public String uploadPoster(@NonNull Long id, MultipartFile file) {
         Movie movie = movieRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(MOVIE_NOT_FOUND_MSG + id));
 
@@ -65,7 +67,7 @@ public class MovieService {
                 .toList();
     }
 
-    public MovieDto getById(Long id) {
+    public MovieDto getById(@NonNull Long id) {
         Movie movie = movieRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         MOVIE_NOT_FOUND_MSG + id));
@@ -95,13 +97,14 @@ public class MovieService {
 
     private MovieDto createMovieWithReviewsInternal(MovieCreateDto dto, boolean failOnPurpose) {
         MovieDto createdMovie = createMovieInternal(dto);
+        Long createdMovieId = Objects.requireNonNull(createdMovie.getId(), "Created movie ID is null");
         
         if (dto.getReviews() != null) {
             for (int i = 0; i < dto.getReviews().size(); i++) {
                 ReviewDto reviewDto = dto.getReviews().get(i);
                 Review review = ReviewMapper.toEntity(reviewDto);
                 
-                Movie movieEntity = movieRepository.findById(createdMovie.getId()).orElseThrow();
+                Movie movieEntity = movieRepository.findById(createdMovieId).orElseThrow();
                 review.setMovie(movieEntity);
                 
                 if (failOnPurpose && i == dto.getReviews().size() - 1) {
@@ -112,7 +115,7 @@ public class MovieService {
             }
         }
         
-        return MovieMapper.toDto(movieRepository.findById(createdMovie.getId()).orElseThrow());
+        return MovieMapper.toDto(movieRepository.findById(createdMovieId).orElseThrow());
     }
 
     private MovieDto createMovieInternal(MovieCreateDto dto) {
@@ -122,28 +125,32 @@ public class MovieService {
         Movie movie = MovieMapper.toEntity(dto);
 
         if (dto.getDirectorId() != null) {
-            Director director = directorRepository.findById(dto.getDirectorId())
+            Long directorId = dto.getDirectorId();
+            Director director = directorRepository.findById(Objects.requireNonNull(directorId))
                     .orElseThrow(() -> new ResourceNotFoundException(DIRECTOR_NOT_FOUND_MSG));
             movie.setDirector(director);
         }
 
         if (dto.getStudioId() != null) {
-            Studio studio = studioRepository.findById(dto.getStudioId())
+            Long studioId = dto.getStudioId();
+            Studio studio = studioRepository.findById(Objects.requireNonNull(studioId))
                     .orElseThrow(() -> new ResourceNotFoundException(STUDIO_NOT_FOUND_MSG));
             movie.setStudio(studio);
         }
 
         if (dto.getGenreIds() != null && !dto.getGenreIds().isEmpty()) {
-            Set<Genre> genres = new HashSet<>(genreRepository.findAllById(dto.getGenreIds()));
+            Set<Long> genreIds = dto.getGenreIds();
+            Set<Genre> genres = new HashSet<>(
+                    genreRepository.findAllById(Objects.requireNonNull(genreIds)));
             movie.setGenres(genres);
         }
 
-        Movie savedMovie = movieRepository.save(movie);
+        Movie savedMovie = movieRepository.save(Objects.requireNonNull(movie, "movie"));
         return MovieMapper.toDto(savedMovie);
     }
 
     @Transactional
-    public MovieDto update(Long id, MovieDto dto) {
+    public MovieDto update(@NonNull Long id, MovieDto dto) {
         Movie movie = movieRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(MOVIE_NOT_FOUND_MSG + id));
 
@@ -157,7 +164,8 @@ public class MovieService {
         movie.setViewCount(dto.getViewCount());
 
         if (dto.getDirectorId() != null) {
-            Director director = directorRepository.findById(dto.getDirectorId())
+            Long directorId = dto.getDirectorId();
+            Director director = directorRepository.findById(Objects.requireNonNull(directorId))
                     .orElseThrow(() -> new ResourceNotFoundException(DIRECTOR_NOT_FOUND_MSG));
             movie.setDirector(director);
         } else {
@@ -165,7 +173,8 @@ public class MovieService {
         }
 
         if (dto.getStudioId() != null) {
-            Studio studio = studioRepository.findById(dto.getStudioId())
+            Long studioId = dto.getStudioId();
+            Studio studio = studioRepository.findById(Objects.requireNonNull(studioId))
                     .orElseThrow(() -> new ResourceNotFoundException(STUDIO_NOT_FOUND_MSG));
             movie.setStudio(studio);
         } else {
@@ -173,7 +182,9 @@ public class MovieService {
         }
 
         if (dto.getGenreIds() != null) {
-            Set<Genre> genres = new HashSet<>(genreRepository.findAllById(dto.getGenreIds()));
+            Set<Long> genreIds = dto.getGenreIds();
+            Set<Genre> genres = new HashSet<>(
+                    genreRepository.findAllById(Objects.requireNonNull(genreIds)));
             movie.setGenres(genres);
         } else {
             movie.getGenres().clear();
@@ -184,7 +195,7 @@ public class MovieService {
     }
 
     @Transactional
-    public void delete(Long id) {
+    public void delete(@NonNull Long id) {
         if (!movieRepository.existsById(id)) {
             throw new ResourceNotFoundException(MOVIE_NOT_FOUND_MSG + id);
         }
@@ -192,30 +203,34 @@ public class MovieService {
     }
 
     @Transactional
-    public MovieDto patch(Long id, MoviePatchDto dto) {
+    public MovieDto patch(@NonNull Long id, MoviePatchDto dto) {
         Movie movie = movieRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(MOVIE_NOT_FOUND_MSG + id));
 
         MovieMapper.updateEntity(movie, dto);
 
         if (dto.getDirectorId() != null) {
-            Director director = directorRepository.findById(dto.getDirectorId())
+            Long directorId = dto.getDirectorId();
+            Director director = directorRepository.findById(Objects.requireNonNull(directorId))
                     .orElseThrow(() -> new ResourceNotFoundException(DIRECTOR_NOT_FOUND_MSG));
             movie.setDirector(director);
         }
 
         if (dto.getStudioId() != null) {
-            Studio studio = studioRepository.findById(dto.getStudioId())
+            Long studioId = dto.getStudioId();
+            Studio studio = studioRepository.findById(Objects.requireNonNull(studioId))
                     .orElseThrow(() -> new ResourceNotFoundException(STUDIO_NOT_FOUND_MSG));
             movie.setStudio(studio);
         }
 
         if (dto.getGenreIds() != null) {
-            Set<Genre> genres = new HashSet<>(genreRepository.findAllById(dto.getGenreIds()));
+            Set<Long> genreIds = dto.getGenreIds();
+            Set<Genre> genres = new HashSet<>(
+                    genreRepository.findAllById(Objects.requireNonNull(genreIds)));
             movie.setGenres(genres);
         }
 
-        Movie updatedMovie = movieRepository.save(movie);
+        Movie updatedMovie = movieRepository.save(Objects.requireNonNull(movie, "movie"));
         return MovieMapper.toDto(updatedMovie);
     }
 }

@@ -8,6 +8,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -40,7 +41,7 @@ public class GenreController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<GenreDto> update(@PathVariable Long id, @Valid @RequestBody GenreDto dto) {
+    public ResponseEntity<GenreDto> update(@PathVariable @NonNull Long id, @Valid @RequestBody GenreDto dto) {
         Genre genre = new Genre();
         genre.setName(dto.getName());
         Genre updated = genreService.update(id, genre);
@@ -48,7 +49,7 @@ public class GenreController {
     }
 
     @DeleteMapping("/{id}")
-        public ResponseEntity<Void> delete(@PathVariable Long id) {
+    public ResponseEntity<Void> delete(@PathVariable @NonNull Long id) {
         genreService.delete(id);
         return ResponseEntity.noContent().build();
     }

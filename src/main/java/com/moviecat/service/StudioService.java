@@ -7,6 +7,7 @@ import com.moviecat.repository.MovieRepository;
 import com.moviecat.repository.StudioRepository;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,7 +22,7 @@ public class StudioService {
         return studioRepository.findAll();
     }
 
-    public Studio getById(Long id) {
+    public Studio getById(@NonNull Long id) {
         return studioRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Studio not found with id: " + id));
     }
@@ -35,7 +36,7 @@ public class StudioService {
     }
 
     @Transactional
-    public Studio update(Long id, Studio studioDetails) {
+    public Studio update(@NonNull Long id, Studio studioDetails) {
         Studio studio = getById(id);
 
         if (studioRepository.existsByTitleAndIdNot(studioDetails.getTitle(), id)) {
@@ -49,7 +50,7 @@ public class StudioService {
     }
 
     @Transactional
-    public void delete(Long id) {
+    public void delete(@NonNull Long id) {
         if (!studioRepository.existsById(id)) {
             throw new ResourceNotFoundException("Studio not found with id: " + id);
         }

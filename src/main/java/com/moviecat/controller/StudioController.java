@@ -8,6 +8,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -42,7 +43,7 @@ public class StudioController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<StudioDto> update(@PathVariable Long id, @Valid @RequestBody StudioDto dto) {
+    public ResponseEntity<StudioDto> update(@PathVariable @NonNull Long id, @Valid @RequestBody StudioDto dto) {
         Studio studio = new Studio();
         studio.setTitle(dto.getTitle());
         studio.setAddress(dto.getAddress());
@@ -51,7 +52,7 @@ public class StudioController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
+    public ResponseEntity<Void> delete(@PathVariable @NonNull Long id) {
         studioService.delete(id);
         return ResponseEntity.noContent().build();
     }

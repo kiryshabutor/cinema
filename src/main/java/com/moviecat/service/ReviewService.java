@@ -8,6 +8,7 @@ import com.moviecat.model.Review;
 import com.moviecat.repository.MovieRepository;
 import com.moviecat.repository.ReviewRepository;
 import java.util.List;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,9 +39,10 @@ public class ReviewService {
         if (dto.getMovieId() == null) {
             throw new IllegalArgumentException("Movie ID is required for a review");
         }
-        
-        Movie movie = movieRepository.findById(dto.getMovieId())
-                .orElseThrow(() -> new ResourceNotFoundException("Movie not found with id: " + dto.getMovieId()));
+
+        Long movieId = Objects.requireNonNull(dto.getMovieId(), "Movie ID is required");
+        Movie movie = movieRepository.findById(movieId)
+                .orElseThrow(() -> new ResourceNotFoundException("Movie not found with id: " + movieId));
         
         Review review = ReviewMapper.toEntity(dto);
         review.setId(null);
