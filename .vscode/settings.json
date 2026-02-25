@@ -1,0 +1,6 @@
+{
+  "java.checkstyle.configuration": "${workspaceFolder}/config/checkstyle/checkstyle.xml",
+  "java.checkstyle.version": "10.21.4",
+  "java.checkstyle.autocheck": true,
+  "java.compile.nullAnalysis.mode": "automatic"
+}
