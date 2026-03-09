@@ -126,7 +126,11 @@ Base URL: `/` (обычно `http://localhost:8080`)
 ### Создать режиссера
 `POST /api/directors`
 ```json
-{ "fullName": "Christopher Nolan" }
+{
+  "lastName": "Nolan",
+  "firstName": "Christopher",
+  "middleName": null
+}
 ```
 
 **Response (201 Created):** `DirectorDto`
@@ -134,7 +138,11 @@ Base URL: `/` (обычно `http://localhost:8080`)
 ### Обновить режиссера
 `PUT /api/directors/{id}`
 ```json
-{ "fullName": "Christopher Nolan Updated" }
+{
+  "lastName": "Nolan",
+  "firstName": "Christopher",
+  "middleName": "Edward"
+}
 ```
 
 **Response (200 OK):** `DirectorDto`
@@ -250,6 +258,7 @@ Base URL: `/` (обычно `http://localhost:8080`)
 - `duration`: required, `>= 1`
 - `viewCount`: required, `>= 0`
 - `directorId`, `studioId`, `genreIds`: optional
+- `directorLastName`, `directorFirstName`, `directorMiddleName`: optional (response fields)
 
 ### MoviePatchDto
 - все поля опциональны
@@ -264,7 +273,9 @@ Base URL: `/` (обычно `http://localhost:8080`)
 - `comment`: optional
 
 ### DirectorDto / GenreDto / StudioDto
-- `DirectorDto.fullName`: required
+- `DirectorDto.lastName`: required
+- `DirectorDto.firstName`: required
+- `DirectorDto.middleName`: optional
 - `GenreDto.name`: required
 - `StudioDto.title`: required
 - `StudioDto.address`: optional

@@ -36,7 +36,9 @@ public class MovieDto {
     private String posterUrl;
 
     private Long directorId;
-    private String directorName;
+    private String directorLastName;
+    private String directorFirstName;
+    private String directorMiddleName;
 
     private Long studioId;
     private String studioTitle;

@@ -6,6 +6,8 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface DirectorRepository extends JpaRepository<Director, Long> {
-    boolean existsByFullName(String fullName);
-    boolean existsByFullNameAndIdNot(String fullName, Long id);
+    boolean existsByLastNameAndFirstNameAndMiddleName(String lastName, String firstName, String middleName);
+
+    boolean existsByLastNameAndFirstNameAndMiddleNameAndIdNot(
+            String lastName, String firstName, String middleName, Long id);
 }

@@ -12,7 +12,12 @@ import lombok.Setter;
 @AllArgsConstructor
 public class DirectorDto {
     private Long id;
-    
-    @NotBlank(message = "Full name is required")
-    private String fullName;
+
+    @NotBlank(message = "Last name is required")
+    private String lastName;
+
+    @NotBlank(message = "First name is required")
+    private String firstName;
+
+    private String middleName;
 }

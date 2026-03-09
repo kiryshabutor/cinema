@@ -28,24 +28,31 @@ public class DirectorController {
     @GetMapping
     public ResponseEntity<List<DirectorDto>> getAll() {
         return ResponseEntity.ok(directorService.getAll().stream()
-                .map(d -> new DirectorDto(d.getId(), d.getFullName()))
+                .map(d -> new DirectorDto(d.getId(), d.getLastName(), d.getFirstName(), d.getMiddleName()))
                 .toList());
     }
 
     @PostMapping
     public ResponseEntity<DirectorDto> create(@Valid @RequestBody DirectorDto dto) {
         Director director = new Director();
-        director.setFullName(dto.getFullName());
+        director.setLastName(dto.getLastName());
+        director.setFirstName(dto.getFirstName());
+        director.setMiddleName(dto.getMiddleName());
         Director saved = directorService.create(director);
-        return ResponseEntity.status(HttpStatus.CREATED).body(new DirectorDto(saved.getId(), saved.getFullName()));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new DirectorDto(saved.getId(), saved.getLastName(), saved.getFirstName(), saved.getMiddleName()));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<DirectorDto> update(@PathVariable @NonNull Long id, @Valid @RequestBody DirectorDto dto) {
         Director director = new Director();
-        director.setFullName(dto.getFullName());
+        director.setLastName(dto.getLastName());
+        director.setFirstName(dto.getFirstName());
+        director.setMiddleName(dto.getMiddleName());
         Director updated = directorService.update(id, director);
-        return ResponseEntity.ok(new DirectorDto(updated.getId(), updated.getFullName()));
+        return ResponseEntity.ok(
+                new DirectorDto(
+                        updated.getId(), updated.getLastName(), updated.getFirstName(), updated.getMiddleName()));
     }
 
     @DeleteMapping("/{id}")

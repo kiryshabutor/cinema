@@ -24,7 +24,9 @@ public final class MovieMapper {
 
         if (movie.getDirector() != null) {
             dto.setDirectorId(movie.getDirector().getId());
-            dto.setDirectorName(movie.getDirector().getFullName());
+            dto.setDirectorLastName(movie.getDirector().getLastName());
+            dto.setDirectorFirstName(movie.getDirector().getFirstName());
+            dto.setDirectorMiddleName(movie.getDirector().getMiddleName());
         }
 
         if (movie.getStudio() != null) {

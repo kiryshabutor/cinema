@@ -26,7 +26,9 @@ public class Director {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String fullName;
+    private String lastName;
+    private String firstName;
+    private String middleName;
 
     @OneToMany(mappedBy = "director", fetch = FetchType.LAZY)
     private List<Movie> movies = new ArrayList<>();

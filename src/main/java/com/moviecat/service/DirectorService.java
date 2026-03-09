@@ -29,23 +29,37 @@ public class DirectorService {
 
     @Transactional
     public Director create(Director director) {
-        if (directorRepository.existsByFullName(director.getFullName())) {
+        String lastName = normalizeRequiredName(director.getLastName());
+        String firstName = normalizeRequiredName(director.getFirstName());
+        String middleName = normalizeMiddleName(director.getMiddleName());
+
+        if (directorRepository.existsByLastNameAndFirstNameAndMiddleName(lastName, firstName, middleName)) {
             throw new ResourceAlreadyExistsException(
-                    "Director with name '" + director.getFullName() + "' already exists");
+                    "Director with name '" + formatFullName(lastName, firstName, middleName) + "' already exists");
         }
+
+        director.setLastName(lastName);
+        director.setFirstName(firstName);
+        director.setMiddleName(middleName);
         return directorRepository.save(director);
     }
 
     @Transactional
     public Director update(@NonNull Long id, Director directorDetails) {
         Director director = getById(id);
+        String lastName = normalizeRequiredName(directorDetails.getLastName());
+        String firstName = normalizeRequiredName(directorDetails.getFirstName());
+        String middleName = normalizeMiddleName(directorDetails.getMiddleName());
 
-        if (directorRepository.existsByFullNameAndIdNot(directorDetails.getFullName(), id)) {
+        if (directorRepository.existsByLastNameAndFirstNameAndMiddleNameAndIdNot(
+                lastName, firstName, middleName, id)) {
             throw new ResourceAlreadyExistsException(
-                    "Director with name '" + directorDetails.getFullName() + "' already exists");
+                    "Director with name '" + formatFullName(lastName, firstName, middleName) + "' already exists");
         }
 
-        director.setFullName(directorDetails.getFullName());
+        director.setLastName(lastName);
+        director.setFirstName(firstName);
+        director.setMiddleName(middleName);
         return directorRepository.save(director);
     }
 
@@ -58,5 +72,24 @@ public class DirectorService {
             throw new ResourceAlreadyExistsException("Cannot delete director with existing movies");
         }
         directorRepository.deleteById(id);
+    }
+
+    private String normalizeRequiredName(String value) {
+        return value == null ? null : value.trim();
+    }
+
+    private String normalizeMiddleName(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private String formatFullName(String lastName, String firstName, String middleName) {
+        if (middleName == null) {
+            return lastName + " " + firstName;
+        }
+        return lastName + " " + firstName + " " + middleName;
     }
 }
