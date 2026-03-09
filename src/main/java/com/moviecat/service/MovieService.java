@@ -1,8 +1,9 @@
 package com.moviecat.service;
 
 import com.moviecat.dto.MovieCreateDto;
-import com.moviecat.dto.MovieDto;
 import com.moviecat.dto.MoviePatchDto;
+import com.moviecat.dto.MovieResponseDto;
+import com.moviecat.dto.MovieUpdateDto;
 import com.moviecat.dto.ReviewDto;
 import com.moviecat.exception.ResourceAlreadyExistsException;
 import com.moviecat.exception.ResourceNotFoundException;
@@ -55,7 +56,7 @@ public class MovieService {
         return fileUrl;
     }
 
-    public List<MovieDto> getAll(String fetchType) {
+    public List<MovieResponseDto> getAll(String fetchType) {
         List<Movie> movies;
         if ("lazy".equalsIgnoreCase(fetchType)) {
             movies = movieRepository.findAll();
@@ -63,40 +64,40 @@ public class MovieService {
             movies = movieRepository.findAllWithDetails();
         }
         return movies.stream()
-                .map(MovieMapper::toDto)
+                .map(MovieMapper::toResponseDto)
                 .toList();
     }
 
-    public MovieDto getById(@NonNull Long id) {
+    public MovieResponseDto getById(@NonNull Long id) {
         Movie movie = movieRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         MOVIE_NOT_FOUND_MSG + id));
-        return MovieMapper.toDto(movie);
+        return MovieMapper.toResponseDto(movie);
     }
 
-    public List<MovieDto> searchByTitle(String title) {
+    public List<MovieResponseDto> searchByTitle(String title) {
         return movieRepository.findByTitleContainingIgnoreCase(title)
                 .stream()
-                .map(MovieMapper::toDto)
+                .map(MovieMapper::toResponseDto)
                 .toList();
     }
 
     @Transactional
-    public MovieDto create(MovieCreateDto dto) {
+    public MovieResponseDto create(MovieCreateDto dto) {
         return createMovieInternal(dto);
     }
 
     @Transactional
-    public MovieDto createWithReviewsTransactional(MovieCreateDto dto, boolean failOnPurpose) {
+    public MovieResponseDto createWithReviewsTransactional(MovieCreateDto dto, boolean failOnPurpose) {
         return createMovieWithReviewsInternal(dto, failOnPurpose);
     }
 
-    public MovieDto createWithReviewsNonTransactional(MovieCreateDto dto, boolean failOnPurpose) {
+    public MovieResponseDto createWithReviewsNonTransactional(MovieCreateDto dto, boolean failOnPurpose) {
         return createMovieWithReviewsInternal(dto, failOnPurpose);
     }
 
-    private MovieDto createMovieWithReviewsInternal(MovieCreateDto dto, boolean failOnPurpose) {
-        MovieDto createdMovie = createMovieInternal(dto);
+    private MovieResponseDto createMovieWithReviewsInternal(MovieCreateDto dto, boolean failOnPurpose) {
+        MovieResponseDto createdMovie = createMovieInternal(dto);
         Long createdMovieId = Objects.requireNonNull(createdMovie.getId(), "Created movie ID is null");
         
         if (dto.getReviews() != null) {
@@ -115,10 +116,10 @@ public class MovieService {
             }
         }
         
-        return MovieMapper.toDto(movieRepository.findById(createdMovieId).orElseThrow());
+        return MovieMapper.toResponseDto(movieRepository.findById(createdMovieId).orElseThrow());
     }
 
-    private MovieDto createMovieInternal(MovieCreateDto dto) {
+    private MovieResponseDto createMovieInternal(MovieCreateDto dto) {
         if (movieRepository.existsByTitle(dto.getTitle())) {
             throw new ResourceAlreadyExistsException("Movie with title '" + dto.getTitle() + "' already exists");
         }
@@ -146,11 +147,11 @@ public class MovieService {
         }
 
         Movie savedMovie = movieRepository.save(Objects.requireNonNull(movie, "movie"));
-        return MovieMapper.toDto(savedMovie);
+        return MovieMapper.toResponseDto(savedMovie);
     }
 
     @Transactional
-    public MovieDto update(@NonNull Long id, MovieDto dto) {
+    public MovieResponseDto update(@NonNull Long id, MovieUpdateDto dto) {
         Movie movie = movieRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(MOVIE_NOT_FOUND_MSG + id));
 
@@ -191,7 +192,7 @@ public class MovieService {
         }
 
         Movie updatedMovie = movieRepository.save(movie);
-        return MovieMapper.toDto(updatedMovie);
+        return MovieMapper.toResponseDto(updatedMovie);
     }
 
     @Transactional
@@ -203,7 +204,7 @@ public class MovieService {
     }
 
     @Transactional
-    public MovieDto patch(@NonNull Long id, MoviePatchDto dto) {
+    public MovieResponseDto patch(@NonNull Long id, MoviePatchDto dto) {
         Movie movie = movieRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(MOVIE_NOT_FOUND_MSG + id));
 
@@ -231,6 +232,6 @@ public class MovieService {
         }
 
         Movie updatedMovie = movieRepository.save(Objects.requireNonNull(movie, "movie"));
-        return MovieMapper.toDto(updatedMovie);
+        return MovieMapper.toResponseDto(updatedMovie);
     }
 }

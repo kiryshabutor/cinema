@@ -1,20 +1,21 @@
 package com.moviecat.mapper;
 
+import com.moviecat.dto.GenreItemDto;
 import com.moviecat.dto.MovieCreateDto;
-import com.moviecat.dto.MovieDto;
 import com.moviecat.dto.MoviePatchDto;
+import com.moviecat.dto.MovieResponseDto;
 import com.moviecat.model.Genre;
 import com.moviecat.model.Movie;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.Comparator;
+import java.util.List;
 
 public final class MovieMapper {
 
     private MovieMapper() {
     }
 
-    public static MovieDto toDto(Movie movie) {
-        MovieDto dto = new MovieDto();
+    public static MovieResponseDto toResponseDto(Movie movie) {
+        MovieResponseDto dto = new MovieResponseDto();
         dto.setId(movie.getId());
         dto.setTitle(movie.getTitle());
         dto.setYear(movie.getYear());
@@ -35,14 +36,11 @@ public final class MovieMapper {
         }
 
         if (movie.getGenres() != null) {
-            Set<Long> genreIds = new HashSet<>();
-            Set<String> genreNames = new HashSet<>();
-            for (Genre genre : movie.getGenres()) {
-                genreIds.add(genre.getId());
-                genreNames.add(genre.getName());
-            }
-            dto.setGenreIds(genreIds);
-            dto.setGenreNames(genreNames);
+            List<GenreItemDto> genres = movie.getGenres().stream()
+                    .sorted(Comparator.comparing(Genre::getId))
+                    .map(genre -> new GenreItemDto(genre.getId(), genre.getName()))
+                    .toList();
+            dto.setGenres(genres);
         }
 
         return dto;
@@ -57,17 +55,6 @@ public final class MovieMapper {
         return movie;
     }
 
-    public static Movie toEntity(MovieDto dto) {
-        Movie movie = new Movie();
-        movie.setId(dto.getId());
-        movie.setTitle(dto.getTitle());
-        movie.setYear(dto.getYear());
-        movie.setDuration(dto.getDuration());
-        movie.setViewCount(dto.getViewCount());
-        movie.setPosterUrl(dto.getPosterUrl());
-        return movie;
-    }
-    
     public static void updateEntity(Movie movie, MoviePatchDto dto) {
         if (dto.getTitle() != null) {
             movie.setTitle(dto.getTitle());

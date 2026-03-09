@@ -17,17 +17,17 @@ Base URL: `/` (обычно `http://localhost:8080`)
 - `fetchType=eager` (default): оптимизированный запрос (JOIN FETCH).
 - `fetchType=lazy`: стандартный `findAll()` (демонстрация N+1).
 
-**Response (200 OK):** `List<MovieDto>`
+**Response (200 OK):** `List<MovieResponseDto>`
 
 ### Поиск фильмов по названию
 `GET /api/movies/search?title={title}`
 
-**Response (200 OK):** `List<MovieDto>`
+**Response (200 OK):** `List<MovieResponseDto>`
 
 ### Получить фильм по ID
 `GET /api/movies/{id}`
 
-**Response (200 OK):** `MovieDto`
+**Response (200 OK):** `MovieResponseDto`
 
 ### Создать фильм
 `POST /api/movies`
@@ -48,7 +48,7 @@ Base URL: `/` (обычно `http://localhost:8080`)
 }
 ```
 
-**Response (201 Created):** `MovieDto`
+**Response (201 Created):** `MovieResponseDto`
 
 ### Создать фильм с отзывами
 `POST /api/movies/with-reviews?fail=false&transactional=true`
@@ -59,15 +59,14 @@ Base URL: `/` (обычно `http://localhost:8080`)
 
 **Request:** тот же `MovieCreateDto`, поле `reviews` используется.
 
-**Response (201 Created):** `MovieDto`
+**Response (201 Created):** `MovieResponseDto`
 
 ### Обновить фильм
 `PUT /api/movies/{id}`
 
-**Request (MovieDto):**
+**Request (MovieUpdateDto):**
 ```json
 {
-  "id": 1,
   "title": "Interstellar Updated",
   "year": 2014,
   "duration": 170,
@@ -78,7 +77,7 @@ Base URL: `/` (обычно `http://localhost:8080`)
 }
 ```
 
-**Response (200 OK):** `MovieDto`
+**Response (200 OK):** `MovieResponseDto`
 
 ### Частичное обновление фильма
 `PATCH /api/movies/{id}`
@@ -96,7 +95,7 @@ Base URL: `/` (обычно `http://localhost:8080`)
 }
 ```
 
-**Response (200 OK):** `MovieDto`
+**Response (200 OK):** `MovieResponseDto`
 
 ### Удалить фильм
 `DELETE /api/movies/{id}`
@@ -252,13 +251,18 @@ Base URL: `/` (обычно `http://localhost:8080`)
 - `genreIds`: optional
 - `reviews`: optional (элементы `ReviewDto`)
 
-### MovieDto
+### MovieUpdateDto
 - `title`: required
 - `year`: required, `>= 1888`, `<= 2027`
 - `duration`: required, `>= 1`
 - `viewCount`: required, `>= 0`
 - `directorId`, `studioId`, `genreIds`: optional
-- `directorLastName`, `directorFirstName`, `directorMiddleName`: optional (response fields)
+
+### MovieResponseDto
+- `id`, `title`, `year`, `duration`, `viewCount`, `posterUrl`
+- `directorId`, `directorLastName`, `directorFirstName`, `directorMiddleName`
+- `studioId`, `studioTitle`
+- `genres`: список объектов `{ id, name }`
 
 ### MoviePatchDto
 - все поля опциональны

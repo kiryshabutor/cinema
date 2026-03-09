@@ -1,8 +1,9 @@
 package com.moviecat.controller;
 
 import com.moviecat.dto.MovieCreateDto;
-import com.moviecat.dto.MovieDto;
 import com.moviecat.dto.MoviePatchDto;
+import com.moviecat.dto.MovieResponseDto;
+import com.moviecat.dto.MovieUpdateDto;
 import com.moviecat.service.MovieService;
 import jakarta.validation.Valid;
 import java.util.Collections;
@@ -32,28 +33,28 @@ public class MovieController {
     private final MovieService movieService;
 
     @GetMapping
-    public ResponseEntity<List<MovieDto>> getAll(
+    public ResponseEntity<List<MovieResponseDto>> getAll(
         @RequestParam(required = false, defaultValue = "eager") String fetchType) {
         return ResponseEntity.ok(movieService.getAll(fetchType));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<MovieDto> getById(@PathVariable @NonNull Long id) {
+    public ResponseEntity<MovieResponseDto> getById(@PathVariable @NonNull Long id) {
         return ResponseEntity.ok(movieService.getById(id));
     }
 
     @GetMapping("/search")
-    public ResponseEntity<List<MovieDto>> searchByTitle(@RequestParam String title) {
+    public ResponseEntity<List<MovieResponseDto>> searchByTitle(@RequestParam String title) {
         return ResponseEntity.ok(movieService.searchByTitle(title));
     }
 
     @PostMapping
-    public ResponseEntity<MovieDto> create(@Valid @RequestBody MovieCreateDto dto) {
+    public ResponseEntity<MovieResponseDto> create(@Valid @RequestBody MovieCreateDto dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(movieService.create(dto));
     }
 
     @PostMapping("/with-reviews")
-    public ResponseEntity<MovieDto> createWithReviews(@Valid @RequestBody MovieCreateDto dto,
+    public ResponseEntity<MovieResponseDto> createWithReviews(@Valid @RequestBody MovieCreateDto dto,
                                       @RequestParam(defaultValue = "false") boolean fail,
                                       @RequestParam(defaultValue = "true") boolean transactional) {
         if (transactional) {
@@ -66,12 +67,14 @@ public class MovieController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<MovieDto> update(@PathVariable @NonNull Long id, @Valid @RequestBody MovieDto dto) {
+    public ResponseEntity<MovieResponseDto> update(@PathVariable @NonNull Long id,
+                                                   @Valid @RequestBody MovieUpdateDto dto) {
         return ResponseEntity.ok(movieService.update(id, dto));
     }
 
     @PatchMapping("/{id}")
-    public ResponseEntity<MovieDto> patch(@PathVariable @NonNull Long id, @Valid @RequestBody MoviePatchDto dto) {
+    public ResponseEntity<MovieResponseDto> patch(@PathVariable @NonNull Long id,
+                                                  @Valid @RequestBody MoviePatchDto dto) {
         return ResponseEntity.ok(movieService.patch(id, dto));
     }
 
