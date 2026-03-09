@@ -33,9 +33,13 @@ public class MovieController {
     private final MovieService movieService;
 
     @GetMapping
-    public ResponseEntity<List<MovieResponseDto>> getAll(
-        @RequestParam(required = false, defaultValue = "eager") String fetchType) {
-        return ResponseEntity.ok(movieService.getAll(fetchType));
+    public ResponseEntity<List<MovieResponseDto>> getAll() {
+        return ResponseEntity.ok(movieService.getAll());
+    }
+
+    @GetMapping("/nplus1-demo")
+    public ResponseEntity<List<MovieResponseDto>> getAllNPlusOneDemo() {
+        return ResponseEntity.ok(movieService.getAllNPlusOneDemo());
     }
 
     @GetMapping("/{id}")

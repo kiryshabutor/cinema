@@ -1,38 +1,59 @@
 # API Documentation
 
-Все запросы к API проходят через **Spring Boot Service**.
-Base URL: `/` (обычно `http://localhost:8080`)
+Все запросы идут в Spring Boot API.
 
-## Общие ответы ошибок
+- Base URL: `/` (обычно `http://localhost:8080`)
+- Формат тела запроса/ответа: `application/json` (кроме загрузки постера)
 
-- `400 Bad Request`: ошибки валидации входных данных.
-- `404 Not Found`: ресурс не найден.
-- `409 Conflict`: конфликт уникальности (например, фильм с таким названием уже существует).
+## Общие ошибки
+
+- `400 Bad Request`
+  Причины: ошибки валидации DTO, некорректные параметры, пустой/невалидный файл.
+- `404 Not Found`
+  Причины: сущность по id не найдена.
+- `409 Conflict`
+  Причины: конфликт уникальности, попытка удалить сущность, на которую есть ссылки.
+- `500 Internal Server Error`
+  Причины: неперехваченные runtime-ошибки (например, `fail=true` в `/api/movies/with-reviews`).
+
+---
 
 ## Movies
 
-### Список фильмов (с демонстрацией N+1)
-`GET /api/movies?fetchType={type}`
+### 1) Список фильмов
 
-- `fetchType=eager` (default): оптимизированный запрос (JOIN FETCH).
-- `fetchType=lazy`: стандартный `findAll()` (демонстрация N+1).
+`GET /api/movies`
 
-**Response (200 OK):** `List<MovieResponseDto>`
-
-### Поиск фильмов по названию
-`GET /api/movies/search?title={title}`
+- Всегда оптимизированная загрузка с деталями (`genres`, `director`, `studio`) через `EntityGraph`.
 
 **Response (200 OK):** `List<MovieResponseDto>`
 
-### Получить фильм по ID
+### 2) Демонстрация N+1
+
+`GET /api/movies/nplus1-demo`
+
+- Намеренно использует обычный `findAll()` с LAZY-связями, чтобы воспроизвести N+1.
+
+**Response (200 OK):** `List<MovieResponseDto>`
+
+### 3) Фильм по id
+
 `GET /api/movies/{id}`
 
 **Response (200 OK):** `MovieResponseDto`
 
-### Создать фильм
+### 4) Поиск по названию
+
+`GET /api/movies/search?title={title}`
+
+**Response (200 OK):** `List<MovieResponseDto>`
+
+### 5) Создать фильм
+
 `POST /api/movies`
 
 **Request (MovieCreateDto):**
+
 ```json
 {
   "title": "Interstellar",
@@ -41,48 +62,74 @@ Base URL: `/` (обычно `http://localhost:8080`)
   "viewCount": 0,
   "directorId": 1,
   "studioId": 1,
-  "genreIds": [1],
+  "genreIds": [1, 9]
+}
+```
+
+**Response (201 Created):** `MovieResponseDto`
+
+### 6) Создать фильм с отзывами
+
+`POST /api/movies/with-reviews?fail=false&transactional=true`
+
+- `fail=true`: симуляция ошибки на последнем отзыве.
+- `transactional=true` (по умолчанию): при ошибке откатывается всё.
+- `transactional=false`: частичное сохранение возможно.
+
+**Request:** `MovieCreateDto` + опциональное поле `reviews`.
+
+Пример:
+
+```json
+{
+  "title": "Dune",
+  "year": 2021,
+  "duration": 155,
+  "viewCount": 0,
+  "directorId": 5,
+  "studioId": 1,
+  "genreIds": [6, 9],
   "reviews": [
-    {"authorAlias": "User1", "rating": 10, "comment": "Great!", "movieId": 1}
+    { "authorAlias": "user1", "rating": 9, "comment": "Great", "movieId": 1 },
+    { "authorAlias": "user2", "rating": 8, "comment": "Good", "movieId": 1 }
   ]
 }
 ```
 
 **Response (201 Created):** `MovieResponseDto`
 
-### Создать фильм с отзывами
-`POST /api/movies/with-reviews?fail=false&transactional=true`
+### 7) Полное обновление фильма
 
-- `fail=true`: симулирует ошибку при сохранении последнего отзыва.
-- `transactional=true` (default): при ошибке откат всей транзакции.
-- `transactional=false`: при ошибке частичное сохранение.
-
-**Request:** тот же `MovieCreateDto`, поле `reviews` используется.
-
-**Response (201 Created):** `MovieResponseDto`
-
-### Обновить фильм
 `PUT /api/movies/{id}`
 
 **Request (MovieUpdateDto):**
+
 ```json
 {
   "title": "Interstellar Updated",
   "year": 2014,
   "duration": 170,
-  "viewCount": 0,
+  "viewCount": 100,
   "directorId": 1,
   "studioId": 1,
-  "genreIds": [1]
+  "genreIds": [2, 9]
 }
 ```
 
 **Response (200 OK):** `MovieResponseDto`
 
-### Частичное обновление фильма
+Фактическое поведение `PUT`:
+
+- если `directorId = null`, режиссер у фильма очищается;
+- если `studioId = null`, студия очищается;
+- если `genreIds = null`, список жанров очищается.
+
+### 8) Частичное обновление фильма
+
 `PATCH /api/movies/{id}`
 
 **Request (MoviePatchDto):**
+
 ```json
 {
   "title": "Новое название",
@@ -97,45 +144,79 @@ Base URL: `/` (обычно `http://localhost:8080`)
 
 **Response (200 OK):** `MovieResponseDto`
 
-### Удалить фильм
+Фактическое поведение `PATCH`:
+
+- обновляются только переданные поля;
+- `directorId`, `studioId`, `genreIds` меняются только если поле пришло с ненулевым значением;
+- очистка связей через `null` в `PATCH` не реализована.
+
+### 9) Удалить фильм
+
 `DELETE /api/movies/{id}`
 
 **Response (204 No Content)**
 
-### Загрузить постер
+### 10) Загрузить постер
+
 `POST /api/movies/{id}/poster`
 
-**Request (multipart/form-data):**
-- `file`: файл изображения
+**Request:** `multipart/form-data`
+
+- `file`: изображение
+
+Допустимые расширения:
+
+- `.jpg`
+- `.jpeg`
+- `.png`
+- `.webp`
+- `.gif`
 
 **Response (200 OK):**
+
 ```json
-{ "url": "/uploads/uuid.jpg" }
+{ "url": "/uploads/<uuid>.<ext>" }
 ```
 
-**Примечание:** доступ к файлу осуществляется по статическому пути `/uploads/**`.
+Статическая раздача: `/uploads/**`.
+
+### MovieResponseDto (пример)
+
+```json
+{
+  "id": 1,
+  "title": "Interstellar",
+  "year": 2014,
+  "duration": 169,
+  "viewCount": 100,
+  "posterUrl": "/uploads/abc123.jpg",
+  "directorId": 1,
+  "directorLastName": "Nolan",
+  "directorFirstName": "Christopher",
+  "directorMiddleName": "Edward",
+  "studioId": 1,
+  "studioTitle": "Warner Bros",
+  "genres": [
+    { "id": 2, "name": "Drama" },
+    { "id": 9, "name": "Sci-Fi" }
+  ]
+}
+```
+
+---
 
 ## Directors
 
-### Список режиссеров
+### 1) Список режиссеров
+
 `GET /api/directors`
 
 **Response (200 OK):** `List<DirectorDto>`
 
-### Создать режиссера
+### 2) Создать режиссера
+
 `POST /api/directors`
-```json
-{
-  "lastName": "Nolan",
-  "firstName": "Christopher",
-  "middleName": null
-}
-```
 
-**Response (201 Created):** `DirectorDto`
-
-### Обновить режиссера
-`PUT /api/directors/{id}`
 ```json
 {
   "lastName": "Nolan",
@@ -144,91 +225,145 @@ Base URL: `/` (обычно `http://localhost:8080`)
 }
 ```
 
+**Response (201 Created):** `DirectorDto`
+
+### 3) Обновить режиссера
+
+`PUT /api/directors/{id}`
+
+```json
+{
+  "lastName": "Nolan",
+  "firstName": "Christopher",
+  "middleName": null
+}
+```
+
 **Response (200 OK):** `DirectorDto`
 
-### Удалить режиссера
+### 4) Удалить режиссера
+
 `DELETE /api/directors/{id}`
 
 **Response (204 No Content)**
 
+Дополнительно:
+
+- уникальность проверяется по комбинации `lastName + firstName + middleName`;
+- перед сохранением ФИО триммится;
+- пустой `middleName` нормализуется в `null`;
+- нельзя удалить режиссера, если есть фильмы (`409 Conflict`).
+
+---
+
 ## Genres
 
-### Список жанров
+### 1) Список жанров
+
 `GET /api/genres`
 
 **Response (200 OK):** `List<GenreDto>`
 
-### Создать жанр
+### 2) Создать жанр
+
 `POST /api/genres`
+
 ```json
 { "name": "Sci-Fi" }
 ```
 
 **Response (201 Created):** `GenreDto`
 
-### Обновить жанр
+### 3) Обновить жанр
+
 `PUT /api/genres/{id}`
+
 ```json
 { "name": "Sci-Fi Updated" }
 ```
 
 **Response (200 OK):** `GenreDto`
 
-### Удалить жанр
+### 4) Удалить жанр
+
 `DELETE /api/genres/{id}`
 
 **Response (204 No Content)**
 
+Дополнительно:
+
+- `name` должен быть уникальным;
+- нельзя удалить жанр, если он используется в фильмах (`409 Conflict`).
+
+---
+
 ## Studios
 
-### Список студий
+### 1) Список студий
+
 `GET /api/studios`
 
 **Response (200 OK):** `List<StudioDto>`
 
-### Создать студию
+### 2) Создать студию
+
 `POST /api/studios`
+
 ```json
 {
   "title": "Warner Bros",
-  "address": "Hollywood, CA"
+  "address": "Burbank, CA"
 }
 ```
 
 **Response (201 Created):** `StudioDto`
 
-### Обновить студию
+### 3) Обновить студию
+
 `PUT /api/studios/{id}`
+
 ```json
 {
   "title": "Warner Bros Updated",
-  "address": "Burbank, CA"
+  "address": "Hollywood, CA"
 }
 ```
 
 **Response (200 OK):** `StudioDto`
 
-### Удалить студию
+### 4) Удалить студию
+
 `DELETE /api/studios/{id}`
 
 **Response (204 No Content)**
 
+Дополнительно:
+
+- `title` должен быть уникальным;
+- нельзя удалить студию, если на нее ссылаются фильмы (`409 Conflict`).
+
+---
+
 ## Reviews
 
-### Список отзывов
+### 1) Все отзывы
+
 `GET /api/reviews`
 
 **Response (200 OK):** `List<ReviewDto>`
 
-### Список отзывов к фильму
+### 2) Отзывы по фильму
+
 `GET /api/reviews/movie/{movieId}`
 
 **Response (200 OK):** `List<ReviewDto>`
 
-### Создать отзыв
+### 3) Создать отзыв
+
 `POST /api/reviews`
 
 **Request (ReviewDto):**
+
 ```json
 {
   "authorAlias": "Critic1",
@@ -240,46 +375,70 @@ Base URL: `/` (обычно `http://localhost:8080`)
 
 **Response (201 Created):** `ReviewDto`
 
+Дополнительно:
+
+- `movieId` обязателен и должен существовать в БД (`404`, если фильм не найден).
+
+---
+
 ## DTO и валидация (фактические ограничения)
 
 ### MovieCreateDto
+
 - `title`: required, not blank
 - `year`: required, `>= 1888`
 - `duration`: required, `>= 1`
 - `viewCount`: required, `>= 0`
 - `directorId`, `studioId`: optional
 - `genreIds`: optional
-- `reviews`: optional (элементы `ReviewDto`)
+- `reviews`: optional (`List<ReviewDto>`)
 
 ### MovieUpdateDto
-- `title`: required
+
+- `title`: required, not blank
 - `year`: required, `>= 1888`, `<= 2027`
 - `duration`: required, `>= 1`
 - `viewCount`: required, `>= 0`
 - `directorId`, `studioId`, `genreIds`: optional
 
-### MovieResponseDto
-- `id`, `title`, `year`, `duration`, `viewCount`, `posterUrl`
-- `directorId`, `directorLastName`, `directorFirstName`, `directorMiddleName`
-- `studioId`, `studioTitle`
-- `genres`: список объектов `{ id, name }`
-
 ### MoviePatchDto
+
 - все поля опциональны
 - `year`: `>= 1888`, `<= 2027`
 - `duration`: `>= 1`
 - `viewCount`: `>= 0`
+- `directorId`, `studioId`, `genreIds`: optional
+
+### MovieResponseDto
+
+- `id`, `title`, `year`, `duration`, `viewCount`, `posterUrl`
+- `directorId`, `directorLastName`, `directorFirstName`, `directorMiddleName`
+- `studioId`, `studioTitle`
+- `genres`: `List<GenreItemDto>`
+
+### GenreItemDto
+
+- `id`: `Long`
+- `name`: `String`
 
 ### ReviewDto
-- `authorAlias`: required
-- `rating`: required, `1..10`
-- `movieId`: required
-- `comment`: optional
 
-### DirectorDto / GenreDto / StudioDto
-- `DirectorDto.lastName`: required
-- `DirectorDto.firstName`: required
-- `DirectorDto.middleName`: optional
-- `GenreDto.name`: required
-- `StudioDto.title`: required
-- `StudioDto.address`: optional
+- `authorAlias`: required, not blank
+- `rating`: required, `1..10`
+- `comment`: optional
+- `movieId`: required
+
+### DirectorDto
+
+- `lastName`: required, not blank
+- `firstName`: required, not blank
+- `middleName`: optional
+
+### GenreDto
+
+- `name`: required, not blank
+
+### StudioDto
+
+- `title`: required, not blank
+- `address`: optional

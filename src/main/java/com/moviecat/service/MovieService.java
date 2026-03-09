@@ -56,14 +56,14 @@ public class MovieService {
         return fileUrl;
     }
 
-    public List<MovieResponseDto> getAll(String fetchType) {
-        List<Movie> movies;
-        if ("lazy".equalsIgnoreCase(fetchType)) {
-            movies = movieRepository.findAll();
-        } else {
-            movies = movieRepository.findAllWithDetails();
-        }
-        return movies.stream()
+    public List<MovieResponseDto> getAll() {
+        return movieRepository.findAllWithDetails().stream()
+                .map(MovieMapper::toResponseDto)
+                .toList();
+    }
+
+    public List<MovieResponseDto> getAllNPlusOneDemo() {
+        return movieRepository.findAll().stream()
                 .map(MovieMapper::toResponseDto)
                 .toList();
     }
