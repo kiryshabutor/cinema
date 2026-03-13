@@ -24,9 +24,15 @@
 
 `GET /api/movies`
 
-- Всегда оптимизированная загрузка с деталями (`genres`, `director`, `studio`) через `EntityGraph`.
+- Параметры пагинации и сортировки:
+  - `page` (default: `0`)
+  - `size` (default: `10`, max: `100`)
+  - `sort` (default: `title`) — `title`, `year`, `viewCount`, `id`
+  - `direction` (default: `asc`) — `asc` или `desc`
+  - `native` (default: `false`) — `true` для native SQL, `false` для JPQL
+- Фильтры не применяются (это полный список с пагинацией).
 
-**Response (200 OK):** `List<MovieResponseDto>`
+**Response (200 OK):** `Page<MovieResponseDto>`
 
 ### 2) Демонстрация N+1
 
@@ -42,11 +48,71 @@
 
 **Response (200 OK):** `MovieResponseDto`
 
-### 4) Поиск по названию
+### 4) Расширенный поиск фильмов
 
-`GET /api/movies/search?title={title}`
+`GET /api/movies/search`
 
-**Response (200 OK):** `List<MovieResponseDto>`
+Параметры:
+
+- `title` (optional) — фильтр по названию, частичное совпадение, case-insensitive.
+- `directorLastName` (optional) — фильтр по фамилии режиссера (связанная сущность `Director`).
+- `genreName` (optional) — фильтр по названию жанра (связанная сущность `Genre`).
+- `studioTitle` (optional) — фильтр по названию студии (связанная сущность `Studio`).
+- `page` (default: `0`) — номер страницы.
+- `size` (default: `10`, max: `100`) — размер страницы.
+- `sort` (default: `title`) — доступно: `title`, `year`, `viewCount`, `id`.
+- `direction` (default: `asc`) — `asc` или `desc`.
+- `native` (default: `false`) — `true` для native SQL, `false` для JPQL.
+
+Параметры с мягким fallback:
+
+- невалидный `sort` -> `title`;
+- невалидный `direction` -> `asc`;
+- `page < 0` -> `0`;
+- `size <= 0` -> `10`;
+- `size > 100` -> `100`.
+
+Пример:
+
+`GET /api/movies/search?title=star&directorLastName=nolan&genreName=sci&page=0&size=5&sort=viewCount&direction=desc&native=true`
+
+**Response (200 OK):** `Page<MovieResponseDto>`
+
+Пример структуры ответа:
+
+```json
+{
+  "content": [
+    {
+      "id": 1,
+      "title": "Interstellar",
+      "year": 2014,
+      "duration": 169,
+      "viewCount": 100,
+      "posterUrl": "/uploads/abc123.jpg",
+      "directorId": 1,
+      "directorLastName": "Nolan",
+      "directorFirstName": "Christopher",
+      "directorMiddleName": "Edward",
+      "studioId": 1,
+      "studioTitle": "Warner Bros",
+      "genres": [
+        { "id": 2, "name": "Drama" },
+        { "id": 9, "name": "Sci-Fi" }
+      ]
+    }
+  ],
+  "pageable": {
+    "pageNumber": 0,
+    "pageSize": 5
+  },
+  "totalElements": 12,
+  "totalPages": 3,
+  "last": false,
+  "first": true,
+  "numberOfElements": 1
+}
+```
 
 ### 5) Создать фильм
 

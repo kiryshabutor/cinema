@@ -1,5 +1,6 @@
 package com.moviecat.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import java.util.Set;
@@ -13,21 +14,29 @@ import lombok.experimental.FieldDefaults;
 @Setter
 @NoArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
+@Schema(description = "Payload for partial movie update")
 public class MoviePatchDto {
 
+    @Schema(description = "Movie title", example = "Interstellar")
     String title;
 
     @Min(value = 1888, message = "Year must be no earlier than 1888")
     @Max(value = 2027, message = "Year must be no later than 2027")
+    @Schema(description = "Release year", example = "2014")
     Integer year;
 
     @Min(value = 1, message = "Duration must be positive")
+    @Schema(description = "Duration in minutes", example = "169")
     Integer duration;
 
     @Min(value = 0, message = "View count must be non-negative")
+    @Schema(description = "View count", example = "100")
     Long viewCount;
 
+    @Schema(description = "Director ID", example = "1")
     Long directorId;
+    @Schema(description = "Studio ID", example = "1")
     Long studioId;
+    @Schema(description = "Genre IDs", example = "[1, 4, 9]")
     Set<Long> genreIds;
 }

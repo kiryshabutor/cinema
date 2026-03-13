@@ -5,8 +5,13 @@ import com.moviecat.exception.ResourceNotFoundException;
 import com.moviecat.model.Studio;
 import com.moviecat.repository.MovieRepository;
 import com.moviecat.repository.StudioRepository;
-import java.util.List;
+import com.moviecat.service.cache.MovieSearchCache;
+import java.util.Locale;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,11 +20,28 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class StudioService {
 
+    private static final int DEFAULT_PAGE = 0;
+    private static final int DEFAULT_SIZE = 10;
+    private static final int MAX_SIZE = 100;
+    private static final String DEFAULT_SORT_FIELD = "id";
+    private static final String DEFAULT_DIRECTION = "asc";
+    private static final String DESC_DIRECTION = "desc";
+    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of("id", "title", "address");
+
     private final StudioRepository studioRepository;
     private final MovieRepository movieRepository;
+    private final MovieSearchCache movieSearchCache;
 
-    public List<Studio> getAll() {
-        return studioRepository.findAll();
+    public Page<Studio> getAll(int page, int size, String sort, String direction) {
+        int normalizedPage = normalizePage(page);
+        int normalizedSize = normalizeSize(size);
+        String normalizedSort = normalizeSort(sort);
+        String normalizedDirection = normalizeDirection(direction);
+        PageRequest pageRequest = PageRequest.of(
+                normalizedPage,
+                normalizedSize,
+                buildSort(normalizedSort, normalizedDirection));
+        return studioRepository.findAll(pageRequest);
     }
 
     public Studio getById(@NonNull Long id) {
@@ -32,7 +54,9 @@ public class StudioService {
         if (studioRepository.existsByTitle(studio.getTitle())) {
             throw new ResourceAlreadyExistsException("Studio with title '" + studio.getTitle() + "' already exists");
         }
-        return studioRepository.save(studio);
+        Studio savedStudio = studioRepository.save(studio);
+        movieSearchCache.invalidate("StudioService.create");
+        return savedStudio;
     }
 
     @Transactional
@@ -46,7 +70,9 @@ public class StudioService {
 
         studio.setTitle(studioDetails.getTitle());
         studio.setAddress(studioDetails.getAddress());
-        return studioRepository.save(studio);
+        Studio updatedStudio = studioRepository.save(studio);
+        movieSearchCache.invalidate("StudioService.update id=" + id);
+        return updatedStudio;
     }
 
     @Transactional
@@ -58,5 +84,49 @@ public class StudioService {
             throw new ResourceAlreadyExistsException("Cannot delete studio with existing movies");
         }
         studioRepository.deleteById(id);
+        movieSearchCache.invalidate("StudioService.delete id=" + id);
+    }
+
+    private int normalizePage(int page) {
+        return Math.max(page, DEFAULT_PAGE);
+    }
+
+    private int normalizeSize(int size) {
+        if (size <= 0) {
+            return DEFAULT_SIZE;
+        }
+        return Math.min(size, MAX_SIZE);
+    }
+
+    private String normalizeSort(String sort) {
+        if (sort == null) {
+            return DEFAULT_SORT_FIELD;
+        }
+        String trimmedSort = sort.trim();
+        if (trimmedSort.isEmpty()) {
+            return DEFAULT_SORT_FIELD;
+        }
+        if (!ALLOWED_SORT_FIELDS.contains(trimmedSort)) {
+            return DEFAULT_SORT_FIELD;
+        }
+        return trimmedSort;
+    }
+
+    private String normalizeDirection(String direction) {
+        if (direction == null) {
+            return DEFAULT_DIRECTION;
+        }
+        String normalizedDirection = direction.trim().toLowerCase(Locale.ROOT);
+        if (!DESC_DIRECTION.equals(normalizedDirection) && !DEFAULT_DIRECTION.equals(normalizedDirection)) {
+            return DEFAULT_DIRECTION;
+        }
+        return normalizedDirection;
+    }
+
+    private Sort buildSort(String sort, String direction) {
+        if (DESC_DIRECTION.equals(direction)) {
+            return Sort.by(sort).descending();
+        }
+        return Sort.by(sort).ascending();
     }
 }
