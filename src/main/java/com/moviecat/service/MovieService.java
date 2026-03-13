@@ -33,7 +33,6 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -115,10 +114,12 @@ public class MovieService {
         String normalizedDirectorLastName = normalizeTextFilter(searchParams.getDirectorLastName());
         String normalizedGenreName = normalizeTextFilter(searchParams.getGenreName());
         String normalizedStudioTitle = normalizeTextFilter(searchParams.getStudioTitle());
-        int normalizedPage = normalizePage(searchParams.getPage());
-        int normalizedSize = normalizeSize(searchParams.getSize());
-        String normalizedSort = normalizeSort(searchParams.getSort());
-        String normalizedDirection = normalizeDirection(searchParams.getDirection());
+        int normalizedPage = PagingSortingUtils.normalizePage(searchParams.getPage(), DEFAULT_PAGE);
+        int normalizedSize = PagingSortingUtils.normalizeSize(searchParams.getSize(), DEFAULT_SIZE, MAX_SIZE);
+        String normalizedSort = PagingSortingUtils.normalizeSort(
+                searchParams.getSort(), DEFAULT_SORT_FIELD, ALLOWED_SORT_FIELDS, true);
+        String normalizedDirection = PagingSortingUtils.normalizeDirection(
+                searchParams.getDirection(), DEFAULT_DIRECTION, DESC_DIRECTION);
         boolean nativeQuery = searchParams.isNativeQuery();
 
         MovieSearchKey key = new MovieSearchKey(
@@ -175,8 +176,10 @@ public class MovieService {
                     normalizedDirection,
                     pageable);
         } else {
-            Pageable pageable = PageRequest.of(normalizedPage, normalizedSize, buildSort(normalizedSort,
-                    normalizedDirection));
+            Pageable pageable = PageRequest.of(
+                    normalizedPage,
+                    normalizedSize,
+                    PagingSortingUtils.buildSort(normalizedSort, normalizedDirection, DESC_DIRECTION));
             moviePage = movieRepository.searchAdvancedJpql(
                     normalizedTitle,
                     normalizedDirectorLastName,
@@ -354,54 +357,6 @@ public class MovieService {
         Movie updatedMovie = movieRepository.save(Objects.requireNonNull(movie, "movie"));
         movieSearchCache.invalidate("MovieService.patch movieId=" + id);
         return MovieMapper.toResponseDto(updatedMovie);
-    }
-
-    private int normalizePage(int page) {
-        if (page < DEFAULT_PAGE) {
-            return DEFAULT_PAGE;
-        }
-        return page;
-    }
-
-    private int normalizeSize(int size) {
-        if (size <= 0) {
-            return DEFAULT_SIZE;
-        }
-        if (size > MAX_SIZE) {
-            return MAX_SIZE;
-        }
-        return size;
-    }
-
-    private String normalizeSort(String sort) {
-        if (sort == null || sort.trim().isEmpty()) {
-            return DEFAULT_SORT_FIELD;
-        }
-        String requestedSort = sort.trim();
-        for (String allowedField : ALLOWED_SORT_FIELDS) {
-            if (allowedField.equalsIgnoreCase(requestedSort)) {
-                return allowedField;
-            }
-        }
-        return DEFAULT_SORT_FIELD;
-    }
-
-    private String normalizeDirection(String direction) {
-        if (direction == null || direction.trim().isEmpty()) {
-            return DEFAULT_DIRECTION;
-        }
-        String normalizedDirection = direction.trim().toLowerCase(Locale.ROOT);
-        if (DESC_DIRECTION.equals(normalizedDirection)) {
-            return DESC_DIRECTION;
-        }
-        return DEFAULT_DIRECTION;
-    }
-
-    private Sort buildSort(String sortField, String sortDirection) {
-        Sort.Direction direction = DESC_DIRECTION.equals(sortDirection)
-                ? Sort.Direction.DESC
-                : Sort.Direction.ASC;
-        return Sort.by(direction, sortField);
     }
 
     private String normalizeTitle(String title) {
