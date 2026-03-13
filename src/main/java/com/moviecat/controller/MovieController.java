@@ -3,6 +3,7 @@ package com.moviecat.controller;
 import com.moviecat.dto.MovieCreateDto;
 import com.moviecat.dto.MoviePatchDto;
 import com.moviecat.dto.MovieResponseDto;
+import com.moviecat.dto.MovieSearchParams;
 import com.moviecat.dto.MovieUpdateDto;
 import com.moviecat.service.MovieService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -91,7 +92,7 @@ public class MovieController {
             @RequestParam(defaultValue = "asc") String direction,
             @Parameter(description = "Use native SQL query mode", example = "false")
             @RequestParam(name = "native", defaultValue = "false") boolean nativeQuery) {
-        return ResponseEntity.ok(movieService.searchAdvanced(
+        return ResponseEntity.ok(movieService.searchAdvanced(new MovieSearchParams(
                 title,
                 directorLastName,
                 genreName,
@@ -100,7 +101,7 @@ public class MovieController {
                 size,
                 sort,
                 direction,
-                nativeQuery));
+                nativeQuery)));
     }
 
     @PostMapping

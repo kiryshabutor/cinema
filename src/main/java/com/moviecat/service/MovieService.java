@@ -3,6 +3,7 @@ package com.moviecat.service;
 import com.moviecat.dto.MovieCreateDto;
 import com.moviecat.dto.MoviePatchDto;
 import com.moviecat.dto.MovieResponseDto;
+import com.moviecat.dto.MovieSearchParams;
 import com.moviecat.dto.MovieUpdateDto;
 import com.moviecat.dto.ReviewDto;
 import com.moviecat.exception.ResourceAlreadyExistsException;
@@ -28,6 +29,7 @@ import java.util.Objects;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -51,7 +53,7 @@ public class MovieService {
     private static final String DEFAULT_SORT_FIELD = "title";
     private static final String DEFAULT_DIRECTION = "asc";
     private static final String DESC_DIRECTION = "desc";
-    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of("title", "year", "viewCount", "id");
+    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of(DEFAULT_SORT_FIELD, "year", "viewCount", "id");
 
     private final MovieRepository movieRepository;
     private final DirectorRepository directorRepository;
@@ -59,6 +61,7 @@ public class MovieService {
     private final GenreRepository genreRepository;
     private final FileStorageService fileStorageService;
     private final MovieSearchCache movieSearchCache;
+    private final ObjectProvider<MovieService> movieServiceProvider;
 
     public String uploadPoster(@NonNull Long id, MultipartFile file) {
         Movie movie = movieRepository.findById(id)
@@ -87,7 +90,8 @@ public class MovieService {
             String sort,
             String direction,
             boolean nativeQuery) {
-        return searchAdvanced("", "", "", "", page, size, sort, direction, nativeQuery);
+        return movieServiceProvider.getObject()
+                .searchAdvanced(new MovieSearchParams("", "", "", "", page, size, sort, direction, nativeQuery));
     }
 
     public List<MovieResponseDto> getAllNPlusOneDemo() {
@@ -104,34 +108,29 @@ public class MovieService {
     }
 
     @Transactional(readOnly = true)
-    public Page<MovieResponseDto> searchAdvanced(
-            String title,
-            String directorLastName,
-            String genreName,
-            String studioTitle,
-            int page,
-            int size,
-            String sort,
-            String direction,
-            boolean nativeQuery) {
-        String normalizedTitle = normalizeTitle(title);
-        String normalizedDirectorLastName = normalizeTextFilter(directorLastName);
-        String normalizedGenreName = normalizeTextFilter(genreName);
-        String normalizedStudioTitle = normalizeTextFilter(studioTitle);
-        int normalizedPage = normalizePage(page);
-        int normalizedSize = normalizeSize(size);
-        String normalizedSort = normalizeSort(sort);
-        String normalizedDirection = normalizeDirection(direction);
+    public Page<MovieResponseDto> searchAdvanced(MovieSearchParams params) {
+        MovieSearchParams searchParams = Objects.requireNonNull(params, "params");
+
+        String normalizedTitle = normalizeTitle(searchParams.getTitle());
+        String normalizedDirectorLastName = normalizeTextFilter(searchParams.getDirectorLastName());
+        String normalizedGenreName = normalizeTextFilter(searchParams.getGenreName());
+        String normalizedStudioTitle = normalizeTextFilter(searchParams.getStudioTitle());
+        int normalizedPage = normalizePage(searchParams.getPage());
+        int normalizedSize = normalizeSize(searchParams.getSize());
+        String normalizedSort = normalizeSort(searchParams.getSort());
+        String normalizedDirection = normalizeDirection(searchParams.getDirection());
+        boolean nativeQuery = searchParams.isNativeQuery();
 
         MovieSearchKey key = new MovieSearchKey(
                 normalizedTitle,
                 normalizedDirectorLastName,
                 normalizedGenreName,
                 normalizedStudioTitle,
-                normalizedPage,
-                normalizedSize,
-                normalizedSort,
-                normalizedDirection,
+                new MovieSearchKey.PagingOptions(
+                        normalizedPage,
+                        normalizedSize,
+                        normalizedSort,
+                        normalizedDirection),
                 nativeQuery);
 
         Page<MovieResponseDto> cachedPage = movieSearchCache.get(key);

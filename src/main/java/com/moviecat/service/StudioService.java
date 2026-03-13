@@ -26,7 +26,7 @@ public class StudioService {
     private static final String DEFAULT_SORT_FIELD = "id";
     private static final String DEFAULT_DIRECTION = "asc";
     private static final String DESC_DIRECTION = "desc";
-    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of("id", "title", "address");
+    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of(DEFAULT_SORT_FIELD, "title", "address");
 
     private final StudioRepository studioRepository;
     private final MovieRepository movieRepository;

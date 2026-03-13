@@ -26,7 +26,7 @@ public class GenreService {
     private static final String DEFAULT_SORT_FIELD = "id";
     private static final String DEFAULT_DIRECTION = "asc";
     private static final String DESC_DIRECTION = "desc";
-    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of("id", "name");
+    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of(DEFAULT_SORT_FIELD, "name");
 
     private final GenreRepository genreRepository;
     private final MovieRepository movieRepository;
