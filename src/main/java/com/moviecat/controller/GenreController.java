@@ -1,17 +1,23 @@
 package com.moviecat.controller;
 
 import com.moviecat.dto.GenreDto;
+import com.moviecat.exception.response.ErrorResponse;
 import com.moviecat.model.Genre;
 import com.moviecat.service.GenreService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.lang.NonNull;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -25,7 +31,26 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/genres")
 @RequiredArgsConstructor
+@Validated
 @Tag(name = "Genres", description = "Genre management")
+@ApiResponses(value = {
+    @ApiResponse(
+            responseCode = "400",
+            description = "Validation error",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+    @ApiResponse(
+            responseCode = "404",
+            description = "Resource not found",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+    @ApiResponse(
+            responseCode = "409",
+            description = "Conflict",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+    @ApiResponse(
+            responseCode = "500",
+            description = "Internal server error",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+})
 public class GenreController {
 
     private final GenreService genreService;
@@ -56,7 +81,7 @@ public class GenreController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Update genre")
-    public ResponseEntity<GenreDto> update(@PathVariable @NonNull Long id, @Valid @RequestBody GenreDto dto) {
+    public ResponseEntity<GenreDto> update(@PathVariable @Positive long id, @Valid @RequestBody GenreDto dto) {
         Genre genre = new Genre();
         genre.setName(dto.getName());
         Genre updated = genreService.update(id, genre);
@@ -65,7 +90,7 @@ public class GenreController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete genre")
-    public ResponseEntity<Void> delete(@PathVariable @NonNull Long id) {
+    public ResponseEntity<Void> delete(@PathVariable @Positive long id) {
         genreService.delete(id);
         return ResponseEntity.noContent().build();
     }

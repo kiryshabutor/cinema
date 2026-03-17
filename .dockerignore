@@ -1,0 +1,12 @@
+.git
+.gitignore
+.idea
+target
+venv
+logs
+uploads
+
+.env
+*.iml
+*.docx
+.~lock.*

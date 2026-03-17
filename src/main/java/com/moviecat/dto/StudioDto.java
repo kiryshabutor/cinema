@@ -11,15 +11,23 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "Studio model")
+@Schema(name = "StudioPayload", description = "Studio request/response payload")
 public class StudioDto {
-    @Schema(description = "Studio ID", example = "1")
+    @Schema(
+            description = "Studio ID",
+            example = "1",
+            accessMode = Schema.AccessMode.READ_ONLY)
     private Long id;
-    
+
     @NotBlank(message = "Title is required")
-    @Schema(description = "Studio title", example = "Warner Bros")
+    @Schema(
+            description = "Studio title",
+            example = "Warner Bros",
+            minLength = 1,
+            maxLength = 255,
+            requiredMode = Schema.RequiredMode.REQUIRED)
     private String title;
-    
-    @Schema(description = "Studio address", example = "Burbank, CA")
+
+    @Schema(description = "Studio address", example = "Burbank, CA", maxLength = 255)
     private String address;
 }

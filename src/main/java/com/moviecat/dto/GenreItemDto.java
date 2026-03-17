@@ -10,10 +10,10 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "Compact genre item in movie response")
+@Schema(name = "GenreItemResponse", description = "Compact genre item in movie response")
 public class GenreItemDto {
-    @Schema(description = "Genre ID", example = "1")
+    @Schema(description = "Genre ID", example = "1", requiredMode = Schema.RequiredMode.REQUIRED)
     private Long id;
-    @Schema(description = "Genre name", example = "Sci-Fi")
+    @Schema(description = "Genre name", example = "Sci-Fi", requiredMode = Schema.RequiredMode.REQUIRED)
     private String name;
 }

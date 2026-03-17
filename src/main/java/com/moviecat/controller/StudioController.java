@@ -1,17 +1,23 @@
 package com.moviecat.controller;
 
 import com.moviecat.dto.StudioDto;
+import com.moviecat.exception.response.ErrorResponse;
 import com.moviecat.model.Studio;
 import com.moviecat.service.StudioService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.lang.NonNull;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -25,7 +31,26 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/studios")
 @RequiredArgsConstructor
+@Validated
 @Tag(name = "Studios", description = "Studio management")
+@ApiResponses(value = {
+    @ApiResponse(
+            responseCode = "400",
+            description = "Validation error",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+    @ApiResponse(
+            responseCode = "404",
+            description = "Resource not found",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+    @ApiResponse(
+            responseCode = "409",
+            description = "Conflict",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+    @ApiResponse(
+            responseCode = "500",
+            description = "Internal server error",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+})
 public class StudioController {
 
     private final StudioService studioService;
@@ -58,7 +83,7 @@ public class StudioController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Update studio")
-    public ResponseEntity<StudioDto> update(@PathVariable @NonNull Long id, @Valid @RequestBody StudioDto dto) {
+    public ResponseEntity<StudioDto> update(@PathVariable @Positive long id, @Valid @RequestBody StudioDto dto) {
         Studio studio = new Studio();
         studio.setTitle(dto.getTitle());
         studio.setAddress(dto.getAddress());
@@ -68,7 +93,7 @@ public class StudioController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete studio")
-    public ResponseEntity<Void> delete(@PathVariable @NonNull Long id) {
+    public ResponseEntity<Void> delete(@PathVariable @Positive long id) {
         studioService.delete(id);
         return ResponseEntity.noContent().build();
     }

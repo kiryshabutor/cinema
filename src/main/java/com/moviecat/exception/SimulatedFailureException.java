@@ -1,8 +1,10 @@
 package com.moviecat.exception;
 
-public class SimulatedFailureException extends RuntimeException {
+import org.springframework.http.HttpStatus;
+
+public class SimulatedFailureException extends ApiException {
 
     public SimulatedFailureException(String message) {
-        super(message);
+        super(HttpStatus.INTERNAL_SERVER_ERROR, message);
     }
 }

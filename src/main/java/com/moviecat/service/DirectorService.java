@@ -24,7 +24,8 @@ public class DirectorService {
     private static final String DEFAULT_SORT_FIELD = "id";
     private static final String DEFAULT_DIRECTION = "asc";
     private static final String DESC_DIRECTION = "desc";
-    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of(DEFAULT_SORT_FIELD, "lastName", "firstName", "middleName");
+    private static final Set<String> ALLOWED_SORT_FIELDS =
+            Set.of(DEFAULT_SORT_FIELD, "lastName", "firstName", "middleName");
 
     private final DirectorRepository directorRepository;
     private final MovieRepository movieRepository;

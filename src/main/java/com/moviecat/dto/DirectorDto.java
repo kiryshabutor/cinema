@@ -11,19 +11,32 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "Director model")
+@Schema(name = "DirectorPayload", description = "Director request/response payload")
 public class DirectorDto {
-    @Schema(description = "Director ID", example = "1")
+    @Schema(
+            description = "Director ID",
+            example = "1",
+            accessMode = Schema.AccessMode.READ_ONLY)
     private Long id;
 
     @NotBlank(message = "Last name is required")
-    @Schema(description = "Last name", example = "Nolan")
+    @Schema(
+            description = "Director last name",
+            example = "Nolan",
+            minLength = 1,
+            maxLength = 120,
+            requiredMode = Schema.RequiredMode.REQUIRED)
     private String lastName;
 
     @NotBlank(message = "First name is required")
-    @Schema(description = "First name", example = "Christopher")
+    @Schema(
+            description = "Director first name",
+            example = "Christopher",
+            minLength = 1,
+            maxLength = 120,
+            requiredMode = Schema.RequiredMode.REQUIRED)
     private String firstName;
 
-    @Schema(description = "Middle name")
+    @Schema(description = "Director middle name", example = "Edward", maxLength = 120)
     private String middleName;
 }

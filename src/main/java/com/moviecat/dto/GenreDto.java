@@ -11,12 +11,20 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "Genre model")
+@Schema(name = "GenrePayload", description = "Genre request/response payload")
 public class GenreDto {
-    @Schema(description = "Genre ID", example = "1")
+    @Schema(
+            description = "Genre ID",
+            example = "1",
+            accessMode = Schema.AccessMode.READ_ONLY)
     private Long id;
-    
+
     @NotBlank(message = "Name is required")
-    @Schema(description = "Genre name", example = "Sci-Fi")
+    @Schema(
+            description = "Genre name",
+            example = "Sci-Fi",
+            minLength = 1,
+            maxLength = 100,
+            requiredMode = Schema.RequiredMode.REQUIRED)
     private String name;
 }

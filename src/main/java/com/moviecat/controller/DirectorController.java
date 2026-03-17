@@ -1,17 +1,23 @@
 package com.moviecat.controller;
 
 import com.moviecat.dto.DirectorDto;
+import com.moviecat.exception.response.ErrorResponse;
 import com.moviecat.model.Director;
 import com.moviecat.service.DirectorService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.lang.NonNull;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -25,13 +31,33 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/directors")
 @RequiredArgsConstructor
+@Validated
 @Tag(name = "Directors", description = "Director management")
+@ApiResponses(value = {
+    @ApiResponse(
+            responseCode = "400",
+            description = "Validation error",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+    @ApiResponse(
+            responseCode = "404",
+            description = "Resource not found",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+    @ApiResponse(
+            responseCode = "409",
+            description = "Conflict",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+    @ApiResponse(
+            responseCode = "500",
+            description = "Internal server error",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+})
 public class DirectorController {
 
     private final DirectorService directorService;
 
     @GetMapping
     @Operation(summary = "Get paginated directors")
+    @ApiResponse(responseCode = "200", description = "Directors retrieved successfully")
     public ResponseEntity<Page<DirectorDto>> getAll(
             @Parameter(description = "Page number (0-based)", example = "0")
             @RequestParam(defaultValue = "0") int page,
@@ -47,6 +73,10 @@ public class DirectorController {
 
     @PostMapping
     @Operation(summary = "Create director")
+    @ApiResponse(
+            responseCode = "201",
+            description = "Director created successfully",
+            content = @Content(schema = @Schema(implementation = DirectorDto.class)))
     public ResponseEntity<DirectorDto> create(@Valid @RequestBody DirectorDto dto) {
         Director director = new Director();
         director.setLastName(dto.getLastName());
@@ -59,7 +89,11 @@ public class DirectorController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Update director")
-    public ResponseEntity<DirectorDto> update(@PathVariable @NonNull Long id, @Valid @RequestBody DirectorDto dto) {
+    @ApiResponse(
+            responseCode = "200",
+            description = "Director updated successfully",
+            content = @Content(schema = @Schema(implementation = DirectorDto.class)))
+    public ResponseEntity<DirectorDto> update(@PathVariable @Positive long id, @Valid @RequestBody DirectorDto dto) {
         Director director = new Director();
         director.setLastName(dto.getLastName());
         director.setFirstName(dto.getFirstName());
@@ -72,7 +106,8 @@ public class DirectorController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete director")
-    public ResponseEntity<Void> delete(@PathVariable @NonNull Long id) {
+    @ApiResponse(responseCode = "204", description = "Director deleted successfully")
+    public ResponseEntity<Void> delete(@PathVariable @Positive long id) {
         directorService.delete(id);
         return ResponseEntity.noContent().build();
     }

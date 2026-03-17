@@ -11,18 +11,18 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "Movie response model")
+@Schema(name = "MovieResponse", description = "Movie response payload")
 public class MovieResponseDto {
 
-    @Schema(description = "Movie ID", example = "1")
+    @Schema(description = "Movie ID", example = "1", requiredMode = Schema.RequiredMode.REQUIRED)
     private Long id;
-    @Schema(description = "Movie title", example = "Interstellar")
+    @Schema(description = "Movie title", example = "Interstellar", requiredMode = Schema.RequiredMode.REQUIRED)
     private String title;
-    @Schema(description = "Release year", example = "2014")
+    @Schema(description = "Release year", example = "2014", requiredMode = Schema.RequiredMode.REQUIRED)
     private Integer year;
-    @Schema(description = "Duration in minutes", example = "169")
+    @Schema(description = "Duration in minutes", example = "169", requiredMode = Schema.RequiredMode.REQUIRED)
     private Integer duration;
-    @Schema(description = "Total view count", example = "1200000")
+    @Schema(description = "Total view count", example = "1200000", requiredMode = Schema.RequiredMode.REQUIRED)
     private Long viewCount;
     @Schema(description = "Poster URL", example = "/uploads/abc123.jpg")
     private String posterUrl;

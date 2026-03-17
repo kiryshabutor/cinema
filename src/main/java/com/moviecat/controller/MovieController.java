@@ -5,11 +5,17 @@ import com.moviecat.dto.MoviePatchDto;
 import com.moviecat.dto.MovieResponseDto;
 import com.moviecat.dto.MovieSearchParams;
 import com.moviecat.dto.MovieUpdateDto;
+import com.moviecat.exception.response.ErrorResponse;
 import com.moviecat.service.MovieService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -17,7 +23,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.lang.NonNull;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -33,7 +39,26 @@ import org.springframework.web.multipart.MultipartFile;
 @RestController
 @RequestMapping("/api/movies")
 @RequiredArgsConstructor
+@Validated
 @Tag(name = "Movies", description = "Movie management and advanced search")
+@ApiResponses(value = {
+    @ApiResponse(
+            responseCode = "400",
+            description = "Validation error",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+    @ApiResponse(
+            responseCode = "404",
+            description = "Resource not found",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+    @ApiResponse(
+            responseCode = "409",
+            description = "Conflict",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+    @ApiResponse(
+            responseCode = "500",
+            description = "Internal server error",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+})
 public class MovieController {
 
     private final MovieService movieService;
@@ -64,7 +89,7 @@ public class MovieController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Get movie by id")
-    public ResponseEntity<MovieResponseDto> getById(@PathVariable @NonNull Long id) {
+    public ResponseEntity<MovieResponseDto> getById(@PathVariable @Positive long id) {
         return ResponseEntity.ok(movieService.getById(id));
     }
 
@@ -130,21 +155,21 @@ public class MovieController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Update movie (full replace)")
-    public ResponseEntity<MovieResponseDto> update(@PathVariable @NonNull Long id,
+    public ResponseEntity<MovieResponseDto> update(@PathVariable @Positive long id,
                                                    @Valid @RequestBody MovieUpdateDto dto) {
         return ResponseEntity.ok(movieService.update(id, dto));
     }
 
     @PatchMapping("/{id}")
     @Operation(summary = "Patch movie (partial update)")
-    public ResponseEntity<MovieResponseDto> patch(@PathVariable @NonNull Long id,
+    public ResponseEntity<MovieResponseDto> patch(@PathVariable @Positive long id,
                                                   @Valid @RequestBody MoviePatchDto dto) {
         return ResponseEntity.ok(movieService.patch(id, dto));
     }
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete movie")
-    public ResponseEntity<Void> delete(@PathVariable @NonNull Long id) {
+    public ResponseEntity<Void> delete(@PathVariable @Positive long id) {
         movieService.delete(id);
         return ResponseEntity.noContent().build();
     }
@@ -152,7 +177,7 @@ public class MovieController {
     @PostMapping("/{id}/poster")
     @Operation(summary = "Upload movie poster", description = "Uploads image and updates poster URL for the movie.")
     public ResponseEntity<Map<String, String>> uploadPoster(
-            @PathVariable @NonNull Long id,
+            @PathVariable @Positive long id,
             @Parameter(description = "Image file (jpg/jpeg/png/webp/gif)")
             @RequestParam("file") MultipartFile file) {
         String fileUrl = movieService.uploadPoster(id, file);

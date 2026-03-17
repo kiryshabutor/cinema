@@ -14,25 +14,42 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "Review model")
+@Schema(name = "ReviewPayload", description = "Review request/response payload")
 public class ReviewDto {
-    @Schema(description = "Review ID", example = "1")
+    @Schema(
+            description = "Review ID",
+            example = "1",
+            accessMode = Schema.AccessMode.READ_ONLY)
     private Long id;
-    
+
     @NotBlank(message = "Author alias is required")
-    @Schema(description = "Author alias", example = "Critic42")
+    @Schema(
+            description = "Author alias",
+            example = "Critic42",
+            minLength = 1,
+            maxLength = 80,
+            requiredMode = Schema.RequiredMode.REQUIRED)
     private String authorAlias;
-    
+
     @NotNull(message = "Rating is required")
     @Min(value = 1, message = "Rating must be between 1 and 10")
     @Max(value = 10, message = "Rating must be between 1 and 10")
-    @Schema(description = "Rating from 1 to 10", example = "9")
+    @Schema(
+            description = "Rating from 1 to 10",
+            example = "9",
+            minimum = "1",
+            maximum = "10",
+            requiredMode = Schema.RequiredMode.REQUIRED)
     private Integer rating;
-    
-    @Schema(description = "Review comment", example = "Great movie!")
+
+    @Schema(description = "Review comment", example = "Great movie!", maxLength = 500)
     private String comment;
-    
+
     @NotNull(message = "Movie ID is required")
-    @Schema(description = "Movie ID", example = "1")
+    @Schema(
+            description = "Movie ID",
+            example = "1",
+            minimum = "1",
+            requiredMode = Schema.RequiredMode.REQUIRED)
     private Long movieId;
 }
