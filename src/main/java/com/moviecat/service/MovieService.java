@@ -153,16 +153,7 @@ public class MovieService {
                             normalizedSort,
                             normalizedDirection,
                             nativeQuery);
-                    return loadSearchPage(
-                            normalizedTitle,
-                            normalizedDirectorLastName,
-                            normalizedGenreName,
-                            normalizedStudioTitle,
-                            normalizedPage,
-                            normalizedSize,
-                            normalizedSort,
-                            normalizedDirection,
-                            nativeQuery);
+                    return loadSearchPage(key);
                 });
 
         if (cacheResult.cacheHit()) {
@@ -371,16 +362,17 @@ public class MovieService {
         return normalizedValue;
     }
 
-    private Page<MovieResponseDto> loadSearchPage(
-            String normalizedTitle,
-            String normalizedDirectorLastName,
-            String normalizedGenreName,
-            String normalizedStudioTitle,
-            int normalizedPage,
-            int normalizedSize,
-            String normalizedSort,
-            String normalizedDirection,
-            boolean nativeQuery) {
+    private Page<MovieResponseDto> loadSearchPage(MovieSearchKey key) {
+        String normalizedTitle = key.titleNormalized();
+        String normalizedDirectorLastName = key.directorLastNameNormalized();
+        String normalizedGenreName = key.genreNameNormalized();
+        String normalizedStudioTitle = key.studioTitleNormalized();
+        int normalizedPage = key.pagingOptions().page();
+        int normalizedSize = key.pagingOptions().size();
+        String normalizedSort = key.pagingOptions().sort();
+        String normalizedDirection = key.pagingOptions().direction();
+        boolean nativeQuery = key.nativeQuery();
+
         Pageable pageable;
         Page<Long> movieIdPage;
         if (nativeQuery) {
