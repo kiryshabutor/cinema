@@ -5,6 +5,7 @@ import com.moviecat.exception.ResourceNotFoundException;
 import com.moviecat.model.Director;
 import com.moviecat.repository.DirectorRepository;
 import com.moviecat.repository.MovieRepository;
+import com.moviecat.service.cache.MovieByIdCache;
 import com.moviecat.service.cache.MovieSearchCache;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +30,7 @@ public class DirectorService {
 
     private final DirectorRepository directorRepository;
     private final MovieRepository movieRepository;
+    private final MovieByIdCache movieByIdCache;
     private final MovieSearchCache movieSearchCache;
 
     public Page<Director> getAll(int page, int size, String sort, String direction) {
@@ -66,6 +68,7 @@ public class DirectorService {
         director.setMiddleName(middleName);
         Director savedDirector = directorRepository.save(director);
         movieSearchCache.invalidate("DirectorService.create");
+        movieByIdCache.invalidate("DirectorService.create");
         return savedDirector;
     }
 
@@ -87,6 +90,7 @@ public class DirectorService {
         director.setMiddleName(middleName);
         Director updatedDirector = directorRepository.save(director);
         movieSearchCache.invalidate("DirectorService.update id=" + id);
+        movieByIdCache.invalidate("DirectorService.update id=" + id);
         return updatedDirector;
     }
 
@@ -100,6 +104,7 @@ public class DirectorService {
         }
         directorRepository.deleteById(id);
         movieSearchCache.invalidate("DirectorService.delete id=" + id);
+        movieByIdCache.invalidate("DirectorService.delete id=" + id);
     }
 
     private String normalizeRequiredName(String value) {

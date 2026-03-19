@@ -1,9 +1,10 @@
 package com.moviecat.service.cache;
 
 import com.moviecat.dto.MovieResponseDto;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
@@ -14,7 +15,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class MovieSearchCache {
 
-    private final Map<MovieSearchKey, Page<MovieResponseDto>> cache = new ConcurrentHashMap<>();
+    private final Map<MovieSearchKey, Page<MovieResponseDto>> cache = Collections.synchronizedMap(new HashMap<>());
 
     public record LookupResult(Page<MovieResponseDto> page, boolean cacheHit) {
     }

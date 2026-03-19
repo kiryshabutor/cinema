@@ -20,6 +20,7 @@ import com.moviecat.repository.DirectorRepository;
 import com.moviecat.repository.GenreRepository;
 import com.moviecat.repository.MovieRepository;
 import com.moviecat.repository.StudioRepository;
+import com.moviecat.service.cache.MovieByIdCache;
 import com.moviecat.service.cache.MovieSearchCache;
 import com.moviecat.service.cache.MovieSearchKey;
 import java.util.ArrayList;
@@ -63,6 +64,7 @@ public class MovieService {
     private final StudioRepository studioRepository;
     private final GenreRepository genreRepository;
     private final FileStorageService fileStorageService;
+    private final MovieByIdCache movieByIdCache;
     private final MovieSearchCache movieSearchCache;
     private final ObjectProvider<MovieService> movieServiceProvider;
 
@@ -76,7 +78,7 @@ public class MovieService {
         movie.setPosterUrl(fileUrl);
         movieRepository.save(movie);
 
-        movieSearchCache.invalidate("MovieService.uploadPoster movieId=" + id);
+        invalidateCaches("MovieService.uploadPoster movieId=" + id);
         return fileUrl;
     }
 
@@ -104,10 +106,16 @@ public class MovieService {
     }
 
     public MovieResponseDto getById(@NonNull Long id) {
-        Movie movie = movieRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        MOVIE_NOT_FOUND_MSG + id));
-        return MovieMapper.toResponseDto(movie);
+        MovieByIdCache.LookupResult cacheResult = movieByIdCache.getOrCompute(id, () -> {
+            log.info("MOVIE BY ID CACHE MISS: movieId={}", id);
+            Movie movie = movieRepository.findById(id)
+                    .orElseThrow(() -> new ResourceNotFoundException(MOVIE_NOT_FOUND_MSG + id));
+            return MovieMapper.toResponseDto(movie);
+        });
+        if (cacheResult.cacheHit()) {
+            log.info("MOVIE BY ID CACHE HIT: movieId={}", id);
+        }
+        return cacheResult.movie();
     }
 
     @Transactional(readOnly = true)
@@ -177,7 +185,7 @@ public class MovieService {
     @Transactional
     public MovieResponseDto create(MovieCreateDto dto) {
         MovieResponseDto createdMovie = createMovieInternal(dto);
-        movieSearchCache.invalidate("MovieService.create");
+        invalidateCaches("MovieService.create");
         return createdMovie;
     }
 
@@ -186,7 +194,7 @@ public class MovieService {
         try {
             return createMovieWithReviewsInternal(dto, failOnPurpose);
         } finally {
-            movieSearchCache.invalidate("MovieService.createWithReviewsTransactional");
+            invalidateCaches("MovieService.createWithReviewsTransactional");
         }
     }
 
@@ -194,7 +202,7 @@ public class MovieService {
         try {
             return createMovieWithReviewsInternal(dto, failOnPurpose);
         } finally {
-            movieSearchCache.invalidate("MovieService.createWithReviewsNonTransactional");
+            invalidateCaches("MovieService.createWithReviewsNonTransactional");
         }
     }
 
@@ -294,7 +302,7 @@ public class MovieService {
         }
 
         Movie updatedMovie = movieRepository.save(movie);
-        movieSearchCache.invalidate("MovieService.update movieId=" + id);
+        invalidateCaches("MovieService.update movieId=" + id);
         return MovieMapper.toResponseDto(updatedMovie);
     }
 
@@ -304,7 +312,7 @@ public class MovieService {
             throw new ResourceNotFoundException(MOVIE_NOT_FOUND_MSG + id);
         }
         movieRepository.deleteById(id);
-        movieSearchCache.invalidate("MovieService.delete movieId=" + id);
+        invalidateCaches("MovieService.delete movieId=" + id);
     }
 
     @Transactional
@@ -336,8 +344,13 @@ public class MovieService {
         }
 
         Movie updatedMovie = movieRepository.save(Objects.requireNonNull(movie, "movie"));
-        movieSearchCache.invalidate("MovieService.patch movieId=" + id);
+        invalidateCaches("MovieService.patch movieId=" + id);
         return MovieMapper.toResponseDto(updatedMovie);
+    }
+
+    private void invalidateCaches(String reason) {
+        movieSearchCache.invalidate(reason);
+        movieByIdCache.invalidate(reason);
     }
 
     private String normalizeTitle(String title) {

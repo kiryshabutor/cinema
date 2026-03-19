@@ -5,6 +5,7 @@ import com.moviecat.exception.ResourceNotFoundException;
 import com.moviecat.model.Studio;
 import com.moviecat.repository.MovieRepository;
 import com.moviecat.repository.StudioRepository;
+import com.moviecat.service.cache.MovieByIdCache;
 import com.moviecat.service.cache.MovieSearchCache;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,7 @@ public class StudioService {
 
     private final StudioRepository studioRepository;
     private final MovieRepository movieRepository;
+    private final MovieByIdCache movieByIdCache;
     private final MovieSearchCache movieSearchCache;
 
     public Page<Studio> getAll(int page, int size, String sort, String direction) {
@@ -56,6 +58,7 @@ public class StudioService {
         }
         Studio savedStudio = studioRepository.save(studio);
         movieSearchCache.invalidate("StudioService.create");
+        movieByIdCache.invalidate("StudioService.create");
         return savedStudio;
     }
 
@@ -72,6 +75,7 @@ public class StudioService {
         studio.setAddress(studioDetails.getAddress());
         Studio updatedStudio = studioRepository.save(studio);
         movieSearchCache.invalidate("StudioService.update id=" + id);
+        movieByIdCache.invalidate("StudioService.update id=" + id);
         return updatedStudio;
     }
 
@@ -85,6 +89,7 @@ public class StudioService {
         }
         studioRepository.deleteById(id);
         movieSearchCache.invalidate("StudioService.delete id=" + id);
+        movieByIdCache.invalidate("StudioService.delete id=" + id);
     }
 
 }

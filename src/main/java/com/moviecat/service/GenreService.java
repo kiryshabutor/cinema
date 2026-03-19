@@ -5,6 +5,7 @@ import com.moviecat.exception.ResourceNotFoundException;
 import com.moviecat.model.Genre;
 import com.moviecat.repository.GenreRepository;
 import com.moviecat.repository.MovieRepository;
+import com.moviecat.service.cache.MovieByIdCache;
 import com.moviecat.service.cache.MovieSearchCache;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,7 @@ public class GenreService {
 
     private final GenreRepository genreRepository;
     private final MovieRepository movieRepository;
+    private final MovieByIdCache movieByIdCache;
     private final MovieSearchCache movieSearchCache;
 
     public Page<Genre> getAll(int page, int size, String sort, String direction) {
@@ -56,6 +58,7 @@ public class GenreService {
         }
         Genre savedGenre = genreRepository.save(genre);
         movieSearchCache.invalidate("GenreService.create");
+        movieByIdCache.invalidate("GenreService.create");
         return savedGenre;
     }
 
@@ -70,6 +73,7 @@ public class GenreService {
         genre.setName(genreDetails.getName());
         Genre updatedGenre = genreRepository.save(genre);
         movieSearchCache.invalidate("GenreService.update id=" + id);
+        movieByIdCache.invalidate("GenreService.update id=" + id);
         return updatedGenre;
     }
 
@@ -83,6 +87,7 @@ public class GenreService {
         }
         genreRepository.deleteById(id);
         movieSearchCache.invalidate("GenreService.delete id=" + id);
+        movieByIdCache.invalidate("GenreService.delete id=" + id);
     }
 
 }
