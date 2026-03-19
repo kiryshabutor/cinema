@@ -4,7 +4,6 @@ import com.moviecat.model.Movie;
 import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -23,28 +22,34 @@ public interface MovieRepository extends JpaRepository<Movie, Long> {
 
     @Query(
             value = """
-            SELECT DISTINCT m
+            SELECT m.id
             FROM Movie m
             LEFT JOIN m.director d
             LEFT JOIN m.studio s
-            LEFT JOIN m.genres g
             WHERE (:title = '' OR LOWER(m.title) LIKE CONCAT('%', :title, '%'))
               AND (:directorLastName = '' OR LOWER(d.lastName) LIKE CONCAT('%', :directorLastName, '%'))
               AND (:studioTitle = '' OR LOWER(s.title) LIKE CONCAT('%', :studioTitle, '%'))
-              AND (:genreName = '' OR LOWER(g.name) LIKE CONCAT('%', :genreName, '%'))
+              AND (:genreName = '' OR EXISTS (
+                     SELECT 1
+                     FROM m.genres g
+                     WHERE LOWER(g.name) LIKE CONCAT('%', :genreName, '%')
+                 ))
             """,
             countQuery = """
-            SELECT COUNT(DISTINCT m.id)
+            SELECT COUNT(m.id)
             FROM Movie m
             LEFT JOIN m.director d
             LEFT JOIN m.studio s
-            LEFT JOIN m.genres g
             WHERE (:title = '' OR LOWER(m.title) LIKE CONCAT('%', :title, '%'))
               AND (:directorLastName = '' OR LOWER(d.lastName) LIKE CONCAT('%', :directorLastName, '%'))
               AND (:studioTitle = '' OR LOWER(s.title) LIKE CONCAT('%', :studioTitle, '%'))
-              AND (:genreName = '' OR LOWER(g.name) LIKE CONCAT('%', :genreName, '%'))
+              AND (:genreName = '' OR EXISTS (
+                     SELECT 1
+                     FROM m.genres g
+                     WHERE LOWER(g.name) LIKE CONCAT('%', :genreName, '%')
+                 ))
             """)
-    Page<Movie> searchAdvancedJpql(
+    Page<Long> searchAdvancedJpql(
             @Param("title") String title,
             @Param("directorLastName") String directorLastName,
             @Param("genreName") String genreName,
@@ -53,7 +58,7 @@ public interface MovieRepository extends JpaRepository<Movie, Long> {
 
     @Query(
             value = """
-            SELECT m.*
+            SELECT m.id
             FROM movies m
             LEFT JOIN directors d ON d.id = m.director_id
             LEFT JOIN studios s ON s.id = m.studio_id
@@ -94,7 +99,7 @@ public interface MovieRepository extends JpaRepository<Movie, Long> {
                  ))
             """,
             nativeQuery = true)
-    Page<Movie> searchAdvancedNative(
+    Page<Long> searchAdvancedNative(
             @Param("title") String title,
             @Param("directorLastName") String directorLastName,
             @Param("genreName") String genreName,
@@ -103,7 +108,24 @@ public interface MovieRepository extends JpaRepository<Movie, Long> {
             @Param("sortDirection") String sortDirection,
             Pageable pageable);
 
-    @EntityGraph(attributePaths = {"genres", "director", "studio"})
-    @Query("SELECT m FROM Movie m")
+    @Query(
+            """
+            SELECT DISTINCT m
+            FROM Movie m
+            LEFT JOIN FETCH m.director
+            LEFT JOIN FETCH m.studio
+            LEFT JOIN FETCH m.genres
+            """)
     List<Movie> findAllWithDetails();
+
+    @Query(
+            """
+            SELECT DISTINCT m
+            FROM Movie m
+            LEFT JOIN FETCH m.director
+            LEFT JOIN FETCH m.studio
+            LEFT JOIN FETCH m.genres
+            WHERE m.id IN :ids
+            """)
+    List<Movie> findAllWithDetailsByIdIn(@Param("ids") List<Long> ids);
 }
