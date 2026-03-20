@@ -78,6 +78,10 @@
 
 **Response (200 OK):** `Page<MovieResponseDto>`
 
+Примечание:
+- для `GET /api/movies/search` поле `genres` возвращается как пустой массив `[]`;
+- фильтр `genreName` при этом работает.
+
 Пример структуры ответа:
 
 ```json
@@ -96,10 +100,7 @@
       "directorMiddleName": "Edward",
       "studioId": 1,
       "studioTitle": "Warner Bros",
-      "genres": [
-        { "id": 2, "name": "Drama" },
-        { "id": 9, "name": "Sci-Fi" }
-      ]
+      "genres": []
     }
   ],
   "pageable": {

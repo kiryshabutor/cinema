@@ -23,7 +23,19 @@ public interface MovieRepository extends JpaRepository<Movie, Long> {
 
     @Query(
             value = """
-            SELECT m.id
+            SELECT
+                m.id AS id,
+                m.title AS title,
+                m.year AS year,
+                m.duration AS duration,
+                m.viewCount AS viewCount,
+                m.posterUrl AS posterUrl,
+                d.id AS directorId,
+                d.lastName AS directorLastName,
+                d.firstName AS directorFirstName,
+                d.middleName AS directorMiddleName,
+                s.id AS studioId,
+                s.title AS studioTitle
             FROM Movie m
             LEFT JOIN m.director d
             LEFT JOIN m.studio s
@@ -50,7 +62,7 @@ public interface MovieRepository extends JpaRepository<Movie, Long> {
                      WHERE LOWER(g.name) LIKE CONCAT('%', :genreName, '%')
                  ))
             """)
-    Page<Long> searchAdvancedJpql(
+    Page<MovieSearchRowProjection> searchAdvancedJpql(
             @Param("title") String title,
             @Param("directorLastName") String directorLastName,
             @Param("genreName") String genreName,
@@ -59,7 +71,19 @@ public interface MovieRepository extends JpaRepository<Movie, Long> {
 
     @Query(
             value = """
-            SELECT m.id
+            SELECT
+                m.id AS "id",
+                m.title AS "title",
+                m.release_year AS "year",
+                m.duration AS "duration",
+                m.view_count AS "viewCount",
+                m.poster_url AS "posterUrl",
+                d.id AS "directorId",
+                d.last_name AS "directorLastName",
+                d.first_name AS "directorFirstName",
+                d.middle_name AS "directorMiddleName",
+                s.id AS "studioId",
+                s.title AS "studioTitle"
             FROM movies m
             LEFT JOIN directors d ON d.id = m.director_id
             LEFT JOIN studios s ON s.id = m.studio_id
@@ -100,7 +124,7 @@ public interface MovieRepository extends JpaRepository<Movie, Long> {
                  ))
             """,
             nativeQuery = true)
-    Page<Long> searchAdvancedNative(
+    Page<MovieSearchRowProjection> searchAdvancedNative(
             @Param("title") String title,
             @Param("directorLastName") String directorLastName,
             @Param("genreName") String genreName,
@@ -126,18 +150,33 @@ public interface MovieRepository extends JpaRepository<Movie, Long> {
             LEFT JOIN FETCH m.director
             LEFT JOIN FETCH m.studio
             LEFT JOIN FETCH m.genres
-            WHERE m.id IN :ids
-            """)
-    List<Movie> findAllWithDetailsByIdIn(@Param("ids") List<Long> ids);
-
-    @Query(
-            """
-            SELECT DISTINCT m
-            FROM Movie m
-            LEFT JOIN FETCH m.director
-            LEFT JOIN FETCH m.studio
-            LEFT JOIN FETCH m.genres
             WHERE m.id = :id
             """)
     Optional<Movie> findByIdWithDetails(@Param("id") Long id);
+
+    interface MovieSearchRowProjection {
+        Long getId();
+
+        String getTitle();
+
+        Integer getYear();
+
+        Integer getDuration();
+
+        Long getViewCount();
+
+        String getPosterUrl();
+
+        Long getDirectorId();
+
+        String getDirectorLastName();
+
+        String getDirectorFirstName();
+
+        String getDirectorMiddleName();
+
+        Long getStudioId();
+
+        String getStudioTitle();
+    }
 }

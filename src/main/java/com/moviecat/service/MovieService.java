@@ -23,19 +23,15 @@ import com.moviecat.repository.StudioRepository;
 import com.moviecat.service.cache.MovieByIdCache;
 import com.moviecat.service.cache.MovieSearchCache;
 import com.moviecat.service.cache.MovieSearchKey;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.lang.NonNull;
@@ -387,10 +383,10 @@ public class MovieService {
         boolean nativeQuery = key.nativeQuery();
 
         Pageable pageable;
-        Page<Long> movieIdPage;
+        Page<MovieRepository.MovieSearchRowProjection> movieSearchPage;
         if (nativeQuery) {
             pageable = PageRequest.of(normalizedPage, normalizedSize);
-            movieIdPage = movieRepository.searchAdvancedNative(
+            movieSearchPage = movieRepository.searchAdvancedNative(
                     normalizedTitle,
                     normalizedDirectorLastName,
                     normalizedGenreName,
@@ -403,34 +399,31 @@ public class MovieService {
                     normalizedPage,
                     normalizedSize,
                     PagingSortingUtils.buildSort(normalizedSort, normalizedDirection, DESC_DIRECTION));
-            movieIdPage = movieRepository.searchAdvancedJpql(
+            movieSearchPage = movieRepository.searchAdvancedJpql(
                     normalizedTitle,
                     normalizedDirectorLastName,
                     normalizedGenreName,
                     normalizedStudioTitle,
                     pageable);
         }
+        return movieSearchPage.map(MovieService::toSearchResponseDto);
+    }
 
-        List<Long> movieIds = movieIdPage.getContent();
-        List<Movie> orderedMovies = List.of();
-        if (!movieIds.isEmpty()) {
-            List<Movie> moviesWithDetails = movieRepository.findAllWithDetailsByIdIn(movieIds);
-            Map<Long, Movie> movieById = new HashMap<>();
-            for (Movie movie : moviesWithDetails) {
-                movieById.put(movie.getId(), movie);
-            }
-            orderedMovies = new ArrayList<>(movieIds.size());
-            for (Long movieId : movieIds) {
-                Movie movie = movieById.get(movieId);
-                if (movie != null) {
-                    orderedMovies.add(movie);
-                }
-            }
-        }
-        Page<Movie> moviePage = new PageImpl<>(
-                Objects.requireNonNull(orderedMovies, "orderedMovies"),
-                pageable,
-                movieIdPage.getTotalElements());
-        return moviePage.map(MovieMapper::toResponseDto);
+    private static MovieResponseDto toSearchResponseDto(MovieRepository.MovieSearchRowProjection row) {
+        MovieResponseDto dto = new MovieResponseDto();
+        dto.setId(row.getId());
+        dto.setTitle(row.getTitle());
+        dto.setYear(row.getYear());
+        dto.setDuration(row.getDuration());
+        dto.setViewCount(row.getViewCount());
+        dto.setPosterUrl(row.getPosterUrl());
+        dto.setDirectorId(row.getDirectorId());
+        dto.setDirectorLastName(row.getDirectorLastName());
+        dto.setDirectorFirstName(row.getDirectorFirstName());
+        dto.setDirectorMiddleName(row.getDirectorMiddleName());
+        dto.setStudioId(row.getStudioId());
+        dto.setStudioTitle(row.getStudioTitle());
+        dto.setGenres(List.of());
+        return dto;
     }
 }
