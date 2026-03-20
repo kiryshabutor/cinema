@@ -6,6 +6,7 @@ services:
       - "8080:8080"
     volumes:
       - ./uploads:/app/uploads
+      - ./logs:/app/logs
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/moviecat_db
       DB_USERNAME: moviecat
