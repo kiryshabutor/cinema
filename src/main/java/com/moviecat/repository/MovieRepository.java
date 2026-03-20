@@ -2,6 +2,7 @@ package com.moviecat.repository;
 
 import com.moviecat.model.Movie;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -128,4 +129,15 @@ public interface MovieRepository extends JpaRepository<Movie, Long> {
             WHERE m.id IN :ids
             """)
     List<Movie> findAllWithDetailsByIdIn(@Param("ids") List<Long> ids);
+
+    @Query(
+            """
+            SELECT DISTINCT m
+            FROM Movie m
+            LEFT JOIN FETCH m.director
+            LEFT JOIN FETCH m.studio
+            LEFT JOIN FETCH m.genres
+            WHERE m.id = :id
+            """)
+    Optional<Movie> findByIdWithDetails(@Param("id") Long id);
 }

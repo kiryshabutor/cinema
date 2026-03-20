@@ -106,16 +106,18 @@ public class MovieService {
     }
 
     public MovieResponseDto getById(@NonNull Long id) {
-        MovieByIdCache.LookupResult cacheResult = movieByIdCache.getOrCompute(id, () -> {
-            log.info("MOVIE BY ID CACHE MISS: movieId={}", id);
-            Movie movie = movieRepository.findById(id)
-                    .orElseThrow(() -> new ResourceNotFoundException(MOVIE_NOT_FOUND_MSG + id));
-            return MovieMapper.toResponseDto(movie);
-        });
-        if (cacheResult.cacheHit()) {
+        MovieResponseDto cachedMovie = movieByIdCache.get(id);
+        if (cachedMovie != null) {
             log.info("MOVIE BY ID CACHE HIT: movieId={}", id);
+            return cachedMovie;
         }
-        return cacheResult.movie();
+
+        log.info("MOVIE BY ID CACHE MISS: movieId={}", id);
+        Movie movie = movieRepository.findByIdWithDetails(id)
+                .orElseThrow(() -> new ResourceNotFoundException(MOVIE_NOT_FOUND_MSG + id));
+        MovieResponseDto loadedMovie = MovieMapper.toResponseDto(movie);
+        movieByIdCache.put(id, loadedMovie);
+        return loadedMovie;
     }
 
     @Transactional(readOnly = true)
@@ -146,25 +148,8 @@ public class MovieService {
                         normalizedDirection),
                 nativeQuery);
 
-        MovieSearchCache.LookupResult cacheResult = movieSearchCache.getOrCompute(
-                key,
-                () -> {
-                    log.info(
-                            "CACHE MISS: title='{}', director='{}', genre='{}', studio='{}', page={}, size={}, "
-                                    + "sort='{}', direction='{}', native={}",
-                            normalizedTitle,
-                            normalizedDirectorLastName,
-                            normalizedGenreName,
-                            normalizedStudioTitle,
-                            normalizedPage,
-                            normalizedSize,
-                            normalizedSort,
-                            normalizedDirection,
-                            nativeQuery);
-                    return loadSearchPage(key);
-                });
-
-        if (cacheResult.cacheHit()) {
+        Page<MovieResponseDto> cachedPage = movieSearchCache.get(key);
+        if (cachedPage != null) {
             log.info(
                     "CACHE HIT: title='{}', director='{}', genre='{}', studio='{}', page={}, size={}, sort='{}',"
                             + " direction='{}', native={}",
@@ -177,9 +162,24 @@ public class MovieService {
                     normalizedSort,
                     normalizedDirection,
                     nativeQuery);
+            return cachedPage;
         }
 
-        return cacheResult.page();
+        log.info(
+                "CACHE MISS: title='{}', director='{}', genre='{}', studio='{}', page={}, size={}, "
+                        + "sort='{}', direction='{}', native={}",
+                normalizedTitle,
+                normalizedDirectorLastName,
+                normalizedGenreName,
+                normalizedStudioTitle,
+                normalizedPage,
+                normalizedSize,
+                normalizedSort,
+                normalizedDirection,
+                nativeQuery);
+        Page<MovieResponseDto> loadedPage = loadSearchPage(key);
+        movieSearchCache.put(key, loadedPage);
+        return loadedPage;
     }
 
     @Transactional
@@ -262,7 +262,7 @@ public class MovieService {
 
     @Transactional
     public MovieResponseDto update(@NonNull Long id, MovieUpdateDto dto) {
-        Movie movie = movieRepository.findById(id)
+        Movie movie = movieRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new ResourceNotFoundException(MOVIE_NOT_FOUND_MSG + id));
 
         if (!movie.getTitle().equals(dto.getTitle()) && movieRepository.existsByTitle(dto.getTitle())) {
@@ -317,7 +317,7 @@ public class MovieService {
 
     @Transactional
     public MovieResponseDto patch(@NonNull Long id, MoviePatchDto dto) {
-        Movie movie = movieRepository.findById(id)
+        Movie movie = movieRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new ResourceNotFoundException(MOVIE_NOT_FOUND_MSG + id));
 
         MovieMapper.updateEntity(movie, dto);
