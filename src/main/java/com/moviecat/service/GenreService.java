@@ -7,6 +7,7 @@ import com.moviecat.repository.GenreRepository;
 import com.moviecat.repository.MovieRepository;
 import com.moviecat.service.cache.MovieByIdCache;
 import com.moviecat.service.cache.MovieSearchCache;
+import java.util.List;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -56,10 +57,7 @@ public class GenreService {
         if (genreRepository.existsByName(genre.getName())) {
             throw new ResourceAlreadyExistsException("Genre with name '" + genre.getName() + "' already exists");
         }
-        Genre savedGenre = genreRepository.save(genre);
-        movieSearchCache.invalidate("GenreService.create");
-        movieByIdCache.invalidate("GenreService.create");
-        return savedGenre;
+        return genreRepository.save(genre);
     }
 
     @Transactional
@@ -70,10 +68,11 @@ public class GenreService {
             throw new ResourceAlreadyExistsException("Genre with name '" + genreDetails.getName() + "' already exists");
         }
 
+        List<Long> relatedMovieIds = movieRepository.findIdsByGenreId(id);
         genre.setName(genreDetails.getName());
         Genre updatedGenre = genreRepository.save(genre);
         movieSearchCache.invalidate("GenreService.update id=" + id);
-        movieByIdCache.invalidate("GenreService.update id=" + id);
+        movieByIdCache.evictAll(relatedMovieIds, "GenreService.update id=" + id);
         return updatedGenre;
     }
 
@@ -86,8 +85,6 @@ public class GenreService {
             throw new ResourceAlreadyExistsException("Cannot delete genre with existing movies");
         }
         genreRepository.deleteById(id);
-        movieSearchCache.invalidate("GenreService.delete id=" + id);
-        movieByIdCache.invalidate("GenreService.delete id=" + id);
     }
 
 }

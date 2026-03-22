@@ -7,6 +7,7 @@ import com.moviecat.repository.MovieRepository;
 import com.moviecat.repository.StudioRepository;
 import com.moviecat.service.cache.MovieByIdCache;
 import com.moviecat.service.cache.MovieSearchCache;
+import java.util.List;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -56,10 +57,7 @@ public class StudioService {
         if (studioRepository.existsByTitle(studio.getTitle())) {
             throw new ResourceAlreadyExistsException("Studio with title '" + studio.getTitle() + "' already exists");
         }
-        Studio savedStudio = studioRepository.save(studio);
-        movieSearchCache.invalidate("StudioService.create");
-        movieByIdCache.invalidate("StudioService.create");
-        return savedStudio;
+        return studioRepository.save(studio);
     }
 
     @Transactional
@@ -71,11 +69,12 @@ public class StudioService {
                     "Studio with title '" + studioDetails.getTitle() + "' already exists");
         }
 
+        List<Long> relatedMovieIds = movieRepository.findIdsByStudioId(id);
         studio.setTitle(studioDetails.getTitle());
         studio.setAddress(studioDetails.getAddress());
         Studio updatedStudio = studioRepository.save(studio);
         movieSearchCache.invalidate("StudioService.update id=" + id);
-        movieByIdCache.invalidate("StudioService.update id=" + id);
+        movieByIdCache.evictAll(relatedMovieIds, "StudioService.update id=" + id);
         return updatedStudio;
     }
 
@@ -88,8 +87,6 @@ public class StudioService {
             throw new ResourceAlreadyExistsException("Cannot delete studio with existing movies");
         }
         studioRepository.deleteById(id);
-        movieSearchCache.invalidate("StudioService.delete id=" + id);
-        movieByIdCache.invalidate("StudioService.delete id=" + id);
     }
 
 }

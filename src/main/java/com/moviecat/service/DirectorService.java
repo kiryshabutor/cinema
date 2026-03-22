@@ -7,6 +7,7 @@ import com.moviecat.repository.DirectorRepository;
 import com.moviecat.repository.MovieRepository;
 import com.moviecat.service.cache.MovieByIdCache;
 import com.moviecat.service.cache.MovieSearchCache;
+import java.util.List;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -66,10 +67,7 @@ public class DirectorService {
         director.setLastName(lastName);
         director.setFirstName(firstName);
         director.setMiddleName(middleName);
-        Director savedDirector = directorRepository.save(director);
-        movieSearchCache.invalidate("DirectorService.create");
-        movieByIdCache.invalidate("DirectorService.create");
-        return savedDirector;
+        return directorRepository.save(director);
     }
 
     @Transactional
@@ -85,12 +83,13 @@ public class DirectorService {
                     "Director with name '" + formatFullName(lastName, firstName, middleName) + "' already exists");
         }
 
+        List<Long> relatedMovieIds = movieRepository.findIdsByDirectorId(id);
         director.setLastName(lastName);
         director.setFirstName(firstName);
         director.setMiddleName(middleName);
         Director updatedDirector = directorRepository.save(director);
         movieSearchCache.invalidate("DirectorService.update id=" + id);
-        movieByIdCache.invalidate("DirectorService.update id=" + id);
+        movieByIdCache.evictAll(relatedMovieIds, "DirectorService.update id=" + id);
         return updatedDirector;
     }
 
@@ -103,8 +102,6 @@ public class DirectorService {
             throw new ResourceAlreadyExistsException("Cannot delete director with existing movies");
         }
         directorRepository.deleteById(id);
-        movieSearchCache.invalidate("DirectorService.delete id=" + id);
-        movieByIdCache.invalidate("DirectorService.delete id=" + id);
     }
 
     private String normalizeRequiredName(String value) {

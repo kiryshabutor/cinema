@@ -21,6 +21,21 @@ public interface MovieRepository extends JpaRepository<Movie, Long> {
 
     boolean existsByGenresId(Long genreId);
 
+    @Query("SELECT m.id FROM Movie m WHERE m.director.id = :directorId")
+    List<Long> findIdsByDirectorId(@Param("directorId") Long directorId);
+
+    @Query("SELECT m.id FROM Movie m WHERE m.studio.id = :studioId")
+    List<Long> findIdsByStudioId(@Param("studioId") Long studioId);
+
+    @Query(
+            """
+            SELECT DISTINCT m.id
+            FROM Movie m
+            JOIN m.genres g
+            WHERE g.id = :genreId
+            """)
+    List<Long> findIdsByGenreId(@Param("genreId") Long genreId);
+
     @Query(
             value = """
             SELECT

@@ -21,6 +21,28 @@ public class MovieByIdCache {
         cache.put(id, value);
     }
 
+    public void evictAll(Iterable<Long> ids, String reason) {
+        if (ids == null) {
+            return;
+        }
+        int requestedIds = 0;
+        int removedEntries = 0;
+        for (Long id : ids) {
+            if (id == null) {
+                continue;
+            }
+            requestedIds++;
+            if (cache.remove(id) != null) {
+                removedEntries++;
+            }
+        }
+        log.info(
+                "MOVIE BY ID CACHE EVICTED BULK: reason='{}', requestedIds={}, removedEntries={}",
+                reason,
+                requestedIds,
+                removedEntries);
+    }
+
     public void clear() {
         invalidate("unspecified");
     }

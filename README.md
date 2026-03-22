@@ -134,17 +134,16 @@ GET /api/movies/search
 - `CACHE HIT` — ответ отдан из кеша
 - `CACHE INVALIDATED` — кеш очищен после мутаций
 
-Инвалидация происходит при изменениях:
-- `Movie`: create/update/patch/delete/uploadPoster/createWithReviews*
-- `Director`: create/update/delete
-- `Genre`: create/update/delete
-- `Studio`: create/update/delete
+Инвалидация movie-кеша:
+- `Movie`: create/update/patch/delete/uploadPoster/createWithReviews* -> полный сброс search/by-id кеша.
+- `Director`/`Genre`/`Studio` `update` -> полный сброс только search-кеша + точечный `evict` by-id кеша для связанных фильмов.
+- `Director`/`Genre`/`Studio` `create` и `delete` (когда нет связанных фильмов) -> movie-кеш не сбрасывается.
 
 Как быстро проверить:
 
 1. Выполни одинаковый `/api/movies/search` два раза подряд.
 2. В логах будет сначала `CACHE MISS`, потом `CACHE HIT`.
-3. Сделай `PUT/PATCH/DELETE` по фильму или update жанра/режиссера/студии.
+3. Сделай `PUT/PATCH/DELETE` по фильму или `update` жанра/режиссера/студии.
 4. В логах появится `CACHE INVALIDATED`.
 5. Следующий такой же поиск снова даст `CACHE MISS`.
 
