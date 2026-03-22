@@ -35,17 +35,19 @@ jobs:
         run: mvn -B clean verify
 
       - name: SonarCloud analysis
-        if: ${{ secrets.SONAR_TOKEN != '' && vars.SONAR_PROJECT_KEY != '' && vars.SONAR_ORGANIZATION != '' }}
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: >
-          mvn -B sonar:sonar
-          -Dsonar.token=${SONAR_TOKEN}
-          -Dsonar.projectKey=${{ vars.SONAR_PROJECT_KEY }}
-          -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }}
-
-      - name: Missing SonarCloud configuration
-        if: ${{ secrets.SONAR_TOKEN == '' || vars.SONAR_PROJECT_KEY == '' || vars.SONAR_ORGANIZATION == '' }}
+          SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY }}
+          SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION }}
         run: |
-          echo "::warning::SonarCloud scan was skipped."
-          echo "::warning::Set repository secret SONAR_TOKEN and variables SONAR_PROJECT_KEY, SONAR_ORGANIZATION."
+          if [ -z "${SONAR_TOKEN}" ] || [ -z "${SONAR_PROJECT_KEY}" ] || [ -z "${SONAR_ORGANIZATION}" ]; then
+            echo "::warning::SonarCloud scan was skipped."
+            echo "::warning::Set SONAR_TOKEN secret and SONAR_PROJECT_KEY / SONAR_ORGANIZATION variables."
+            exit 0
+          fi
+
+          mvn -B sonar:sonar \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.token="${SONAR_TOKEN}" \
+            -Dsonar.projectKey="${SONAR_PROJECT_KEY}" \
+            -Dsonar.organization="${SONAR_ORGANIZATION}"
