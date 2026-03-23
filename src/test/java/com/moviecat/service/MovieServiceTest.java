@@ -352,6 +352,25 @@ class MovieServiceTest {
     }
 
     @Test
+    void create_shouldThrow_whenAnyGenreIdMissing() {
+        MovieCreateDto dto = createDto();
+        Set<Long> genreIds = nn(Set.of(1L, 3000L));
+        dto.setGenreIds(genreIds);
+
+        Genre existingGenre = new Genre();
+        existingGenre.setId(1L);
+        existingGenre.setName("Drama");
+
+        when(movieRepository.existsByTitle(dto.getTitle())).thenReturn(false);
+        when(genreRepository.findAllById(genreIds)).thenReturn(nn(List.of(existingGenre)));
+
+        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class, () -> movieService.create(dto));
+
+        assertTrue(exception.getMessage().contains("3000"));
+        verify(movieRepository, never()).save(any(Movie.class));
+    }
+
+    @Test
     void update_shouldReplaceFieldsAndInvalidateCaches() {
         Long movieId = 10L;
         Movie existing = movie(movieId, "Old");
@@ -499,6 +518,33 @@ class MovieServiceTest {
     }
 
     @Test
+    void update_shouldThrow_whenAnyGenreIdMissing() {
+        Long movieId = 16L;
+        Movie existing = movie(movieId, "Old");
+
+        MovieUpdateDto dto = new MovieUpdateDto();
+        dto.setTitle("Updated");
+        dto.setYear(2020);
+        dto.setDuration(101);
+        dto.setViewCount(2L);
+        Set<Long> genreIds = nn(Set.of(7L, 3000L));
+        dto.setGenreIds(genreIds);
+
+        Genre existingGenre = new Genre();
+        existingGenre.setId(7L);
+
+        when(movieRepository.findByIdWithDetails(movieId)).thenReturn(Optional.of(existing));
+        when(movieRepository.existsByTitle("Updated")).thenReturn(false);
+        when(genreRepository.findAllById(genreIds)).thenReturn(nn(List.of(existingGenre)));
+
+        ResourceNotFoundException exception =
+                assertThrows(ResourceNotFoundException.class, () -> movieService.update(movieId, dto));
+
+        assertTrue(exception.getMessage().contains("3000"));
+        verify(movieRepository, never()).save(existing);
+    }
+
+    @Test
     void update_shouldThrow_whenNewTitleAlreadyExists() {
         Long movieId = 10L;
         Movie existing = movie(movieId, "Old");
@@ -617,6 +663,27 @@ class MovieServiceTest {
         when(studioRepository.findById(20L)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> movieService.patch(movieId, dto));
+    }
+
+    @Test
+    void patch_shouldThrow_whenAnyGenreIdMissing() {
+        Long movieId = 14L;
+        Movie existing = movie(movieId, "Patch");
+        MoviePatchDto dto = new MoviePatchDto();
+        Set<Long> genreIds = nn(Set.of(9L, 3000L));
+        dto.setGenreIds(genreIds);
+
+        Genre existingGenre = new Genre();
+        existingGenre.setId(9L);
+
+        when(movieRepository.findByIdWithDetails(movieId)).thenReturn(Optional.of(existing));
+        when(genreRepository.findAllById(genreIds)).thenReturn(nn(List.of(existingGenre)));
+
+        ResourceNotFoundException exception =
+                assertThrows(ResourceNotFoundException.class, () -> movieService.patch(movieId, dto));
+
+        assertTrue(exception.getMessage().contains("3000"));
+        verify(movieRepository, never()).save(existing);
     }
 
     @Test

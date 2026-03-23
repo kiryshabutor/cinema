@@ -1,9 +1,11 @@
 package com.moviecat.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import java.util.Set;
 import lombok.AccessLevel;
@@ -31,6 +33,7 @@ public class MovieCreateDto {
 
     @NotNull(message = "Year is required")
     @Min(value = 1888, message = "Year must be no earlier than 1888")
+    @Max(value = 2027, message = "Year must be no later than 2027")
     @Schema(description = "Release year", example = "2014", requiredMode = Schema.RequiredMode.REQUIRED)
     Integer year;
 
@@ -44,10 +47,12 @@ public class MovieCreateDto {
     @Schema(description = "Initial view count", example = "0", requiredMode = Schema.RequiredMode.REQUIRED)
     Long viewCount = 0L;
 
-    @Schema(description = "Director ID", example = "1")
+    @Positive(message = "Director ID must be positive")
+    @Schema(description = "Director ID", example = "1", minimum = "1")
     Long directorId;
-    @Schema(description = "Studio ID", example = "1")
+    @Positive(message = "Studio ID must be positive")
+    @Schema(description = "Studio ID", example = "1", minimum = "1")
     Long studioId;
     @Schema(description = "Genre IDs", example = "[1, 4, 9]")
-    Set<Long> genreIds;
+    Set<@Positive(message = "Genre ID must be positive") Long> genreIds;
 }

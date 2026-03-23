@@ -15,6 +15,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 @RestControllerAdvice
@@ -66,6 +67,29 @@ public class GlobalExceptionHandler {
                 .body(buildErrorResponse(HttpStatus.BAD_REQUEST, message));
     }
 
+    @ExceptionHandler(HandlerMethodValidationException.class)
+    public ResponseEntity<ErrorResponse> handleHandlerMethodValidationException(
+            HandlerMethodValidationException exception) {
+        Map<String, String> errors = new LinkedHashMap<>();
+        exception.getParameterValidationResults().forEach(result -> {
+            String parameterName = result.getMethodParameter().getParameterName();
+            String errorField = parameterName != null ? parameterName : "parameter";
+            if (result.getContainerIndex() != null) {
+                errorField = "%s[%d]".formatted(errorField, result.getContainerIndex());
+            }
+            String fieldKey = errorField;
+            result.getResolvableErrors().forEach(error ->
+                    errors.putIfAbsent(fieldKey, resolveMessage(error.getDefaultMessage(), VALIDATION_FAILED)));
+        });
+
+        if (errors.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(buildErrorResponse(HttpStatus.BAD_REQUEST, VALIDATION_FAILED));
+        }
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(buildErrorResponse(HttpStatus.BAD_REQUEST, VALIDATION_FAILED, errors));
+    }
+
     @ExceptionHandler({IllegalArgumentException.class, ConstraintViolationException.class})
     public ResponseEntity<ErrorResponse> handleBadRequest(RuntimeException exception) {
         if (exception instanceof ConstraintViolationException constraintViolationException) {
@@ -97,5 +121,12 @@ public class GlobalExceptionHandler {
             String message,
             Map<String, String> errors) {
         return new ErrorResponse(status.value(), message, LocalDateTime.now(), errors);
+    }
+
+    private String resolveMessage(String message, String fallback) {
+        if (message == null || message.isBlank()) {
+            return fallback;
+        }
+        return message;
     }
 }

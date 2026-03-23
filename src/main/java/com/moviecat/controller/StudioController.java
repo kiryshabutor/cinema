@@ -12,6 +12,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -59,8 +61,11 @@ public class StudioController {
     @Operation(summary = "Get paginated studios")
     public ResponseEntity<Page<StudioDto>> getAll(
             @Parameter(description = "Page number (0-based)", example = "0")
+            @Min(value = 0, message = "Page must be greater than or equal to 0")
             @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Page size (default 10, max 100)", example = "10")
+            @Min(value = 1, message = "Size must be between 1 and 100")
+            @Max(value = 100, message = "Size must be between 1 and 100")
             @RequestParam(defaultValue = "10") int size,
             @Parameter(description = "Sort field: id, title, address", example = "id")
             @RequestParam(defaultValue = "id") String sort,

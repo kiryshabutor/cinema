@@ -3,6 +3,9 @@ package com.moviecat.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 import java.util.Set;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -22,6 +25,8 @@ public class MoviePatchDto {
             example = "Interstellar",
             minLength = 1,
             maxLength = 255)
+    @Size(min = 1, max = 255, message = "Title length must be between 1 and 255")
+    @Pattern(regexp = ".*\\S.*", message = "Title must not be blank")
     String title;
 
     @Min(value = 1888, message = "Year must be no earlier than 1888")
@@ -37,10 +42,12 @@ public class MoviePatchDto {
     @Schema(description = "View count", example = "100", minimum = "0")
     Long viewCount;
 
+    @Positive(message = "Director ID must be positive")
     @Schema(description = "Director ID", example = "1", minimum = "1")
     Long directorId;
+    @Positive(message = "Studio ID must be positive")
     @Schema(description = "Studio ID", example = "1", minimum = "1")
     Long studioId;
     @Schema(description = "Genre IDs", example = "[1, 4, 9]")
-    Set<Long> genreIds;
+    Set<@Positive(message = "Genre ID must be positive") Long> genreIds;
 }

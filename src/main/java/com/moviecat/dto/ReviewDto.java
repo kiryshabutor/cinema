@@ -2,6 +2,7 @@ package com.moviecat.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -18,6 +19,7 @@ public class ReviewDto extends ReviewContentDto {
     private Long id;
 
     @NotNull(message = "Movie ID is required")
+    @Positive(message = "Movie ID must be positive")
     @Schema(
             description = "Movie ID",
             example = "1",

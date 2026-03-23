@@ -2,6 +2,7 @@ package com.moviecat.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -20,6 +21,7 @@ public class StudioDto {
     private Long id;
 
     @NotBlank(message = "Title is required")
+    @Size(max = 255, message = "Studio title length must be at most 255")
     @Schema(
             description = "Studio title",
             example = "Warner Bros",
@@ -28,6 +30,7 @@ public class StudioDto {
             requiredMode = Schema.RequiredMode.REQUIRED)
     private String title;
 
+    @Size(max = 255, message = "Studio address length must be at most 255")
     @Schema(description = "Studio address", example = "Burbank, CA", maxLength = 255)
     private String address;
 }

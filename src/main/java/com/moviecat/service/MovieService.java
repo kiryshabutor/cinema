@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
+import java.util.TreeSet;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
@@ -43,6 +44,7 @@ public class MovieService {
     private static final String MOVIE_NOT_FOUND_MSG = "Movie not found with id: ";
     private static final String DIRECTOR_NOT_FOUND_MSG = "Director not found";
     private static final String STUDIO_NOT_FOUND_MSG = "Studio not found";
+    private static final String GENRES_NOT_FOUND_MSG = "Genres not found with ids: ";
     private static final int DEFAULT_PAGE = 0;
     private static final int DEFAULT_SIZE = 10;
     private static final int MAX_SIZE = 100;
@@ -202,10 +204,7 @@ public class MovieService {
         }
 
         if (dto.getGenreIds() != null && !dto.getGenreIds().isEmpty()) {
-            Set<Long> genreIds = dto.getGenreIds();
-            Set<Genre> genres = new HashSet<>(
-                    genreRepository.findAllById(Objects.requireNonNull(genreIds)));
-            movie.setGenres(genres);
+            movie.setGenres(resolveGenresByIds(dto.getGenreIds()));
         }
 
         Movie savedMovie = movieRepository.save(Objects.requireNonNull(movie, "movie"));
@@ -245,10 +244,7 @@ public class MovieService {
         }
 
         if (dto.getGenreIds() != null) {
-            Set<Long> genreIds = dto.getGenreIds();
-            Set<Genre> genres = new HashSet<>(
-                    genreRepository.findAllById(Objects.requireNonNull(genreIds)));
-            movie.setGenres(genres);
+            movie.setGenres(resolveGenresByIds(dto.getGenreIds()));
         } else {
             movie.getGenres().clear();
         }
@@ -289,10 +285,7 @@ public class MovieService {
         }
 
         if (dto.getGenreIds() != null) {
-            Set<Long> genreIds = dto.getGenreIds();
-            Set<Genre> genres = new HashSet<>(
-                    genreRepository.findAllById(Objects.requireNonNull(genreIds)));
-            movie.setGenres(genres);
+            movie.setGenres(resolveGenresByIds(dto.getGenreIds()));
         }
 
         Movie updatedMovie = movieRepository.save(Objects.requireNonNull(movie, "movie"));
@@ -303,6 +296,21 @@ public class MovieService {
     private void invalidateCaches(String reason) {
         movieSearchCache.invalidate(reason);
         movieByIdCache.invalidate(reason);
+    }
+
+    private Set<Genre> resolveGenresByIds(Set<Long> genreIds) {
+        Set<Long> requestedIds = Objects.requireNonNull(genreIds, "genreIds");
+        Set<Genre> resolvedGenres = new HashSet<>(genreRepository.findAllById(requestedIds));
+        Set<Long> foundIds = resolvedGenres.stream()
+                .map(Genre::getId)
+                .collect(java.util.stream.Collectors.toSet());
+
+        Set<Long> missingIds = new TreeSet<>(requestedIds);
+        missingIds.removeAll(foundIds);
+        if (!missingIds.isEmpty()) {
+            throw new ResourceNotFoundException(GENRES_NOT_FOUND_MSG + missingIds);
+        }
+        return resolvedGenres;
     }
 
     private String normalizeTitle(String title) {

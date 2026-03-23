@@ -18,6 +18,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Positive;
 import java.util.Collections;
 import java.util.List;
@@ -73,8 +75,11 @@ public class MovieController {
             description = "Returns a paginated movie list. Supports sorting and JPQL/native query mode.")
     public ResponseEntity<Page<MovieResponseDto>> getAll(
             @Parameter(description = "Page number (0-based)", example = "0")
+            @Min(value = 0, message = "Page must be greater than or equal to 0")
             @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Page size (default 10, max 100)", example = "10")
+            @Min(value = 1, message = "Size must be between 1 and 100")
+            @Max(value = 100, message = "Size must be between 1 and 100")
             @RequestParam(defaultValue = "10") int size,
             @Parameter(description = "Sort field: title, year, viewCount, id", example = "title")
             @RequestParam(defaultValue = "title") String sort,
@@ -112,8 +117,11 @@ public class MovieController {
             @Parameter(description = "Studio title filter (contains, case-insensitive)")
             @RequestParam(required = false) String studioTitle,
             @Parameter(description = "Page number (0-based)", example = "0")
+            @Min(value = 0, message = "Page must be greater than or equal to 0")
             @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Page size (default 10, max 100)", example = "10")
+            @Min(value = 1, message = "Size must be between 1 and 100")
+            @Max(value = 100, message = "Size must be between 1 and 100")
             @RequestParam(defaultValue = "10") int size,
             @Parameter(description = "Sort field: title, year, viewCount, id", example = "title")
             @RequestParam(defaultValue = "title") String sort,
@@ -142,7 +150,8 @@ public class MovieController {
     @PostMapping("/{movieId}/reviews")
     @Operation(
             summary = "Bulk create reviews for movie",
-            description = "Creates several reviews for one movie. Can simulate transactional/non-transactional failure.")
+            description = "Creates several reviews for one movie. Can simulate transactional/"
+                    + "non-transactional failure.")
     public ResponseEntity<List<ReviewDto>> createReviewsBulk(
             @PathVariable @Positive long movieId,
             @Valid @RequestBody(required = false) List<@Valid ReviewCreateItemDto> reviews,

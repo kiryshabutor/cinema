@@ -5,6 +5,8 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 import java.util.Set;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -20,6 +22,7 @@ import lombok.experimental.FieldDefaults;
 public class MovieUpdateDto {
 
     @NotBlank(message = "Title is required")
+    @Size(min = 1, max = 255, message = "Title length must be between 1 and 255")
     @Schema(
             description = "Movie title",
             example = "Interstellar",
@@ -57,10 +60,12 @@ public class MovieUpdateDto {
             requiredMode = Schema.RequiredMode.REQUIRED)
     Long viewCount;
 
+    @Positive(message = "Director ID must be positive")
     @Schema(description = "Director ID", example = "1", minimum = "1")
     Long directorId;
+    @Positive(message = "Studio ID must be positive")
     @Schema(description = "Studio ID", example = "1", minimum = "1")
     Long studioId;
     @Schema(description = "Genre IDs", example = "[1, 4, 9]")
-    Set<Long> genreIds;
+    Set<@Positive(message = "Genre ID must be positive") Long> genreIds;
 }

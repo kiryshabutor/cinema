@@ -1,7 +1,6 @@
 package com.moviecat.aop;
 
 import com.moviecat.exception.ApiException;
-import com.moviecat.exception.LoggingException;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -12,8 +11,6 @@ import org.springframework.stereotype.Component;
 @Component
 @Slf4j
 public class ServiceLoggingAspect {
-
-    private static final String ERROR_EXECUTING_METHOD = "Error executing method!";
 
     @Around("execution(* com.moviecat.service..*(..))")
     public Object logExecutionTime(ProceedingJoinPoint joinPoint) throws Throwable {
@@ -26,13 +23,19 @@ public class ServiceLoggingAspect {
             return result;
         } catch (ApiException exception) {
             long duration = System.currentTimeMillis() - start;
-            log.warn("Business exception in method {} after {} ms: {}", methodName, duration, exception.getMessage());
+            if (exception.getStatus().is5xxServerError()) {
+                log.error("Server exception in method {} after {} ms (status={}): {}",
+                        methodName, duration, exception.getStatus().value(), exception.getMessage(), exception);
+            } else {
+                log.warn("Business exception in method {} after {} ms (status={}): {}",
+                        methodName, duration, exception.getStatus().value(), exception.getMessage());
+            }
             throw exception;
         } catch (Exception exception) {
             long duration = System.currentTimeMillis() - start;
             log.error("Unexpected error while executing method {} after {} ms: {}",
                     methodName, duration, exception.getMessage(), exception);
-            throw new LoggingException(ERROR_EXECUTING_METHOD, exception);
+            throw exception;
         }
     }
 }
