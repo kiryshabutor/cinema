@@ -122,7 +122,8 @@ public class ReviewService {
     }
 
     private Movie findMovieById(Long movieId) {
-        return movieRepository.findById(movieId)
-                .orElseThrow(() -> new ResourceNotFoundException("Movie not found with id: " + movieId));
+        Long safeMovieId = Objects.requireNonNull(movieId, "Movie ID is required");
+        return movieRepository.findById(safeMovieId)
+                .orElseThrow(() -> new ResourceNotFoundException("Movie not found with id: " + safeMovieId));
     }
 }
