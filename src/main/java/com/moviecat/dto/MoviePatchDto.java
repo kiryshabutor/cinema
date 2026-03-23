@@ -26,7 +26,7 @@ public class MoviePatchDto {
             minLength = 1,
             maxLength = 255)
     @Size(min = 1, max = 255, message = "Title length must be between 1 and 255")
-    @Pattern(regexp = ".*\\S.*", message = "Title must not be blank")
+    @Pattern(regexp = "\\s*+\\S[\\s\\S]*", message = "Title must not be blank")
     String title;
 
     @Min(value = 1888, message = "Year must be no earlier than 1888")
