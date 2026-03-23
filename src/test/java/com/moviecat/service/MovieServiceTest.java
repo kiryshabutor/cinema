@@ -337,6 +337,21 @@ class MovieServiceTest {
     }
 
     @Test
+    void create_shouldSkipGenresLookup_whenGenreIdsNull() {
+        MovieCreateDto dto = createDto();
+        dto.setGenreIds(null);
+
+        Movie saved = movie(201L, dto.getTitle());
+        when(movieRepository.existsByTitle(dto.getTitle())).thenReturn(false);
+        when(movieRepository.save(any(Movie.class))).thenReturn(saved);
+
+        MovieResponseDto result = movieService.create(dto);
+
+        assertEquals(201L, result.getId());
+        verify(genreRepository, never()).findAllById(any());
+    }
+
+    @Test
     void update_shouldReplaceFieldsAndInvalidateCaches() {
         Long movieId = 10L;
         Movie existing = movie(movieId, "Old");
