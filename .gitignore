@@ -13,3 +13,4 @@ postman
 logs
 .vscode/
 .m2/
+.mvn/
