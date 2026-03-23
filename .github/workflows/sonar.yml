@@ -17,6 +17,9 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
+    env:
+      SONAR_HOST_URL: https://sonarcloud.io
+      SONAR_COVERAGE_INCLUSIONS: src/main/java/com/moviecat/service/**/*.java
 
     steps:
       - name: Checkout
@@ -47,8 +50,8 @@ jobs:
           fi
 
           mvn -B sonar:sonar \
-            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.host.url="${SONAR_HOST_URL}" \
             -Dsonar.token="${SONAR_TOKEN}" \
             -Dsonar.projectKey="${SONAR_PROJECT_KEY}" \
             -Dsonar.organization="${SONAR_ORGANIZATION}" \
-            -Dsonar.coverage.inclusions="src/main/java/com/moviecat/service/**/*.java"
+            -Dsonar.coverage.inclusions="${SONAR_COVERAGE_INCLUSIONS}"
