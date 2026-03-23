@@ -19,7 +19,18 @@ jobs:
       pull-requests: read
     env:
       SONAR_HOST_URL: https://sonarcloud.io
-      SONAR_COVERAGE_INCLUSIONS: src/main/java/com/moviecat/service/*Service.java,src/main/java/com/moviecat/service/**/*Service.java
+      SONAR_COVERAGE_EXCLUSIONS: >-
+        src/main/java/com/moviecat/MovieCatalogApplication.java,
+        src/main/java/com/moviecat/aop/**,
+        src/main/java/com/moviecat/config/**,
+        src/main/java/com/moviecat/controller/**,
+        src/main/java/com/moviecat/dto/**,
+        src/main/java/com/moviecat/exception/**,
+        src/main/java/com/moviecat/mapper/**,
+        src/main/java/com/moviecat/model/**,
+        src/main/java/com/moviecat/repository/**,
+        src/main/java/com/moviecat/service/cache/**,
+        src/main/java/com/moviecat/service/PagingSortingUtils.java
 
     steps:
       - name: Checkout
@@ -62,4 +73,4 @@ jobs:
             -Dsonar.token="${SONAR_TOKEN_CLEAN}" \
             -Dsonar.projectKey="${SONAR_PROJECT_KEY_CLEAN}" \
             -Dsonar.organization="${SONAR_ORGANIZATION_CLEAN}" \
-            -Dsonar.coverage.inclusions="${SONAR_COVERAGE_INCLUSIONS}"
+            -Dsonar.coverage.exclusions="${SONAR_COVERAGE_EXCLUSIONS}"
