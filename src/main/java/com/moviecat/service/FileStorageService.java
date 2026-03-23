@@ -10,6 +10,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -23,6 +24,7 @@ public class FileStorageService {
         return extension != null && ALLOWED_EXTENSIONS.contains(extension.toLowerCase());
     }
 
+    @Autowired
     public FileStorageService() {
         this(Paths.get("uploads"));
     }

@@ -576,8 +576,9 @@ class MovieServiceTest {
     @Test
     void patch_shouldThrow_whenMovieMissing() {
         when(movieRepository.findByIdWithDetails(404L)).thenReturn(Optional.empty());
+        MoviePatchDto dto = new MoviePatchDto();
 
-        assertThrows(ResourceNotFoundException.class, () -> movieService.patch(404L, new MoviePatchDto()));
+        assertThrows(ResourceNotFoundException.class, () -> movieService.patch(404L, dto));
     }
 
     @Test

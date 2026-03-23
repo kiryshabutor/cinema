@@ -1,5 +1,7 @@
 package com.moviecat.service;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -12,14 +14,18 @@ import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.web.multipart.MultipartFile;
 
 class FileStorageServiceTest {
 
     @Test
     void defaultConstructor_shouldInitializeUploadDirectory() {
-        new FileStorageService();
+        FileStorageService service = new FileStorageService();
+        assertNotNull(service);
     }
 
     @Test
@@ -37,7 +43,7 @@ class FileStorageServiceTest {
 
         Object result = method.invoke(service, new Object[] {null});
 
-        assertTrue(Boolean.FALSE.equals(result));
+        assertEquals(Boolean.FALSE, result);
     }
 
     @Test
@@ -65,34 +71,19 @@ class FileStorageServiceTest {
         assertThrows(IllegalArgumentException.class, () -> service.storeFile(file));
     }
 
-    @Test
-    void storeFile_shouldThrowForInvalidExtension() throws IOException {
+    @ParameterizedTest
+    @MethodSource("invalidFilenames")
+    void storeFile_shouldThrowForInvalidFilename(String originalFilename) throws IOException {
         FileStorageService service = new FileStorageService(Files.createTempDirectory("moviecat-upload-dir"));
         MultipartFile file = mock(MultipartFile.class);
         when(file.isEmpty()).thenReturn(false);
-        when(file.getOriginalFilename()).thenReturn("poster.txt");
+        when(file.getOriginalFilename()).thenReturn(originalFilename);
 
         assertThrows(IllegalArgumentException.class, () -> service.storeFile(file));
     }
 
-    @Test
-    void storeFile_shouldThrowForMissingExtension() throws IOException {
-        FileStorageService service = new FileStorageService(Files.createTempDirectory("moviecat-upload-dir"));
-        MultipartFile file = mock(MultipartFile.class);
-        when(file.isEmpty()).thenReturn(false);
-        when(file.getOriginalFilename()).thenReturn("poster");
-
-        assertThrows(IllegalArgumentException.class, () -> service.storeFile(file));
-    }
-
-    @Test
-    void storeFile_shouldThrowForNullFilename() throws IOException {
-        FileStorageService service = new FileStorageService(Files.createTempDirectory("moviecat-upload-dir"));
-        MultipartFile file = mock(MultipartFile.class);
-        when(file.isEmpty()).thenReturn(false);
-        when(file.getOriginalFilename()).thenReturn(null);
-
-        assertThrows(IllegalArgumentException.class, () -> service.storeFile(file));
+    private static Stream<String> invalidFilenames() {
+        return Stream.of("poster.txt", "poster", null);
     }
 
     @Test
