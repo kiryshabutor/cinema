@@ -5,16 +5,12 @@ import com.moviecat.dto.MoviePatchDto;
 import com.moviecat.dto.MovieResponseDto;
 import com.moviecat.dto.MovieSearchParams;
 import com.moviecat.dto.MovieUpdateDto;
-import com.moviecat.dto.ReviewDto;
 import com.moviecat.exception.ResourceAlreadyExistsException;
 import com.moviecat.exception.ResourceNotFoundException;
-import com.moviecat.exception.SimulatedFailureException;
 import com.moviecat.mapper.MovieMapper;
-import com.moviecat.mapper.ReviewMapper;
 import com.moviecat.model.Director;
 import com.moviecat.model.Genre;
 import com.moviecat.model.Movie;
-import com.moviecat.model.Review;
 import com.moviecat.model.Studio;
 import com.moviecat.repository.DirectorRepository;
 import com.moviecat.repository.GenreRepository;
@@ -183,46 +179,6 @@ public class MovieService {
         MovieResponseDto createdMovie = createMovieInternal(dto);
         invalidateCaches("MovieService.create");
         return createdMovie;
-    }
-
-    @Transactional
-    public MovieResponseDto createWithReviewsTransactional(MovieCreateDto dto, boolean failOnPurpose) {
-        try {
-            return createMovieWithReviewsInternal(dto, failOnPurpose);
-        } finally {
-            invalidateCaches("MovieService.createWithReviewsTransactional");
-        }
-    }
-
-    public MovieResponseDto createWithReviewsNonTransactional(MovieCreateDto dto, boolean failOnPurpose) {
-        try {
-            return createMovieWithReviewsInternal(dto, failOnPurpose);
-        } finally {
-            invalidateCaches("MovieService.createWithReviewsNonTransactional");
-        }
-    }
-
-    private MovieResponseDto createMovieWithReviewsInternal(MovieCreateDto dto, boolean failOnPurpose) {
-        MovieResponseDto createdMovie = createMovieInternal(dto);
-        Long createdMovieId = Objects.requireNonNull(createdMovie.getId(), "Created movie ID is null");
-
-        if (dto.getReviews() != null) {
-            for (int i = 0; i < dto.getReviews().size(); i++) {
-                ReviewDto reviewDto = dto.getReviews().get(i);
-                Review review = ReviewMapper.toEntity(reviewDto);
-
-                Movie movieEntity = movieRepository.findById(createdMovieId).orElseThrow();
-                review.setMovie(movieEntity);
-
-                if (failOnPurpose && i == dto.getReviews().size() - 1) {
-                    throw new SimulatedFailureException("Simulated failure during review processing");
-                }
-                movieEntity.getReviews().add(review);
-                movieRepository.save(movieEntity);
-            }
-        }
-
-        return MovieMapper.toResponseDto(movieRepository.findById(createdMovieId).orElseThrow());
     }
 
     private MovieResponseDto createMovieInternal(MovieCreateDto dto) {

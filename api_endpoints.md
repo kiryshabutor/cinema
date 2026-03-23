@@ -14,7 +14,7 @@
 - `409 Conflict`
   Причины: конфликт уникальности, попытка удалить сущность, на которую есть ссылки.
 - `500 Internal Server Error`
-  Причины: неперехваченные runtime-ошибки (например, `fail=true` в `/api/movies/with-reviews`).
+  Причины: неперехваченные runtime-ошибки (например, `fail=true` в bulk-операции отзывов).
 
 ---
 
@@ -135,35 +135,27 @@
 
 **Response (201 Created):** `MovieResponseDto`
 
-### 6) Создать фильм с отзывами
+### 6) Bulk создать отзывы для фильма
 
-`POST /api/movies/with-reviews?fail=false&transactional=true`
+`POST /api/movies/{movieId}/reviews?fail=false&transactional=true`
 
+- `movieId` берется из path.
 - `fail=true`: симуляция ошибки на последнем отзыве.
-- `transactional=true` (по умолчанию): при ошибке откатывается всё.
+- `transactional=true` (по умолчанию): при ошибке откатывается вся bulk-операция.
 - `transactional=false`: частичное сохранение возможно.
 
-**Request:** `MovieCreateDto` + опциональное поле `reviews`.
+**Request:** `List<ReviewCreateItemDto>`
 
 Пример:
 
 ```json
-{
-  "title": "Dune",
-  "year": 2021,
-  "duration": 155,
-  "viewCount": 0,
-  "directorId": 5,
-  "studioId": 1,
-  "genreIds": [6, 9],
-  "reviews": [
-    { "authorAlias": "user1", "rating": 9, "comment": "Great", "movieId": 1 },
-    { "authorAlias": "user2", "rating": 8, "comment": "Good", "movieId": 1 }
-  ]
-}
+[
+  { "authorAlias": "user1", "rating": 9, "comment": "Great" },
+  { "authorAlias": "user2", "rating": 8, "comment": "Good" }
+]
 ```
 
-**Response (201 Created):** `MovieResponseDto`
+**Response (201 Created):** `List<ReviewDto>`
 
 ### 7) Полное обновление фильма
 
@@ -446,6 +438,16 @@
 
 - `movieId` обязателен и должен существовать в БД (`404`, если фильм не найден).
 
+### 4) Bulk создать отзывы по фильму
+
+`POST /api/movies/{movieId}/reviews?fail=false&transactional=true`
+
+- Тело запроса: `List<ReviewCreateItemDto>`
+- `movieId` берется из path.
+- `transactional=true`: при `fail=true` откатывается вся bulk-операция.
+- `transactional=false`: при `fail=true` в БД остается частично сохраненный результат.
+- Полный пример запроса см. в разделе Movies, пункт 6.
+
 ---
 
 ## DTO и валидация (фактические ограничения)
@@ -458,7 +460,6 @@
 - `viewCount`: required, `>= 0`
 - `directorId`, `studioId`: optional
 - `genreIds`: optional
-- `reviews`: optional (`List<ReviewDto>`)
 
 ### MovieUpdateDto
 
@@ -494,6 +495,12 @@
 - `rating`: required, `1..10`
 - `comment`: optional
 - `movieId`: required
+
+### ReviewCreateItemDto
+
+- `authorAlias`: required, not blank
+- `rating`: required, `1..10`
+- `comment`: optional
 
 ### DirectorDto
 

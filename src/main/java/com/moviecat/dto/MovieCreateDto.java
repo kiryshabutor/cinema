@@ -1,12 +1,10 @@
 package com.moviecat.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import java.util.List;
 import java.util.Set;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -52,7 +50,4 @@ public class MovieCreateDto {
     Long studioId;
     @Schema(description = "Genre IDs", example = "[1, 4, 9]")
     Set<Long> genreIds;
-    @Schema(description = "Optional reviews to create together with movie")
-    @Valid
-    List<@Valid ReviewDto> reviews;
 }

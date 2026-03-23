@@ -21,10 +21,8 @@ import com.moviecat.dto.MoviePatchDto;
 import com.moviecat.dto.MovieResponseDto;
 import com.moviecat.dto.MovieSearchParams;
 import com.moviecat.dto.MovieUpdateDto;
-import com.moviecat.dto.ReviewDto;
 import com.moviecat.exception.ResourceAlreadyExistsException;
 import com.moviecat.exception.ResourceNotFoundException;
-import com.moviecat.exception.SimulatedFailureException;
 import com.moviecat.model.Director;
 import com.moviecat.model.Genre;
 import com.moviecat.model.Movie;
@@ -672,116 +670,6 @@ class MovieServiceTest {
         assertEquals("year", params.getSort());
         assertEquals("desc", params.getDirection());
         assertTrue(params.isNativeQuery());
-    }
-
-    @Test
-    void createWithReviewsTransactional_shouldReturnMovie_whenReviewsAreNull() {
-        MovieCreateDto dto = createDto();
-        Movie persistedMovie = movie(10L, dto.getTitle());
-
-        when(movieRepository.existsByTitle(dto.getTitle())).thenReturn(false);
-        when(movieRepository.save(any(Movie.class))).thenReturn(Objects.requireNonNull(persistedMovie));
-        when(movieRepository.findById(10L)).thenReturn(Optional.of(persistedMovie));
-
-        MovieResponseDto result = movieService.createWithReviewsTransactional(dto, false);
-
-        assertEquals(10L, result.getId());
-        verify(movieRepository, times(1)).save(any(Movie.class));
-        verify(movieSearchCache).invalidate("MovieService.createWithReviewsTransactional");
-        verify(movieByIdCache).invalidate("MovieService.createWithReviewsTransactional");
-    }
-
-    @Test
-    void createWithReviewsNonTransactional_shouldReturnMovie_whenReviewsAreEmpty() {
-        MovieCreateDto dto = createDto();
-        dto.setReviews(List.of());
-        Movie persistedMovie = movie(10L, dto.getTitle());
-
-        when(movieRepository.existsByTitle(dto.getTitle())).thenReturn(false);
-        when(movieRepository.save(any(Movie.class))).thenReturn(Objects.requireNonNull(persistedMovie));
-        when(movieRepository.findById(10L)).thenReturn(Optional.of(persistedMovie));
-
-        MovieResponseDto result = movieService.createWithReviewsNonTransactional(dto, false);
-
-        assertEquals(10L, result.getId());
-        verify(movieRepository, times(1)).save(any(Movie.class));
-        verify(movieSearchCache).invalidate("MovieService.createWithReviewsNonTransactional");
-        verify(movieByIdCache).invalidate("MovieService.createWithReviewsNonTransactional");
-    }
-
-    @Test
-    void createWithReviewsNonTransactional_shouldSaveFirstReviewBeforeFailureOnSecond() {
-        MovieCreateDto dto = createDto();
-        dto.setReviews(nn(List.of(
-                new ReviewDto(null, "alice", 9, "great", 1L),
-                new ReviewDto(null, "bob", 8, "good", 1L))));
-
-        Movie persistedMovie = movie(10L, dto.getTitle());
-
-        when(movieRepository.existsByTitle(dto.getTitle())).thenReturn(false);
-        when(movieRepository.save(any(Movie.class))).thenReturn(Objects.requireNonNull(persistedMovie));
-        when(movieRepository.findById(10L)).thenReturn(Optional.of(persistedMovie));
-
-        assertThrows(SimulatedFailureException.class, () -> movieService.createWithReviewsNonTransactional(dto, true));
-
-        assertEquals(1, persistedMovie.getReviews().size());
-        verify(movieRepository, times(2)).save(any(Movie.class));
-        verify(movieSearchCache).invalidate("MovieService.createWithReviewsNonTransactional");
-        verify(movieByIdCache).invalidate("MovieService.createWithReviewsNonTransactional");
-    }
-
-    @Test
-    void createWithReviewsTransactional_shouldProcessReviews_whenFailOnPurposeIsFalse() {
-        MovieCreateDto dto = createDto();
-        dto.setReviews(nn(List.of(new ReviewDto(null, "alice", 9, "great", 1L))));
-
-        Movie persistedMovie = movie(10L, dto.getTitle());
-
-        when(movieRepository.existsByTitle(dto.getTitle())).thenReturn(false);
-        when(movieRepository.save(any(Movie.class))).thenReturn(Objects.requireNonNull(persistedMovie));
-        when(movieRepository.findById(10L)).thenReturn(Optional.of(persistedMovie));
-
-        MovieResponseDto result = movieService.createWithReviewsTransactional(dto, false);
-
-        assertEquals(10L, result.getId());
-        assertEquals(1, persistedMovie.getReviews().size());
-        verify(movieRepository, times(2)).save(any(Movie.class));
-        verify(movieSearchCache).invalidate("MovieService.createWithReviewsTransactional");
-        verify(movieByIdCache).invalidate("MovieService.createWithReviewsTransactional");
-    }
-
-    @Test
-    void createWithReviewsTransactional_shouldInvalidateCachesEvenOnFailure() {
-        MovieCreateDto dto = createDto();
-        dto.setReviews(nn(List.of(new ReviewDto(null, "alice", 9, "great", 1L))));
-
-        Movie persistedMovie = movie(10L, dto.getTitle());
-
-        when(movieRepository.existsByTitle(dto.getTitle())).thenReturn(false);
-        when(movieRepository.save(any(Movie.class))).thenReturn(Objects.requireNonNull(persistedMovie));
-        when(movieRepository.findById(10L)).thenReturn(Optional.of(persistedMovie));
-
-        assertThrows(SimulatedFailureException.class, () -> movieService.createWithReviewsTransactional(dto, true));
-
-        verify(movieSearchCache).invalidate("MovieService.createWithReviewsTransactional");
-        verify(movieByIdCache).invalidate("MovieService.createWithReviewsTransactional");
-    }
-
-    @Test
-    void createWithReviewsNonTransactional_shouldInvalidateCachesEvenOnFailure() {
-        MovieCreateDto dto = createDto();
-        dto.setReviews(nn(List.of(new ReviewDto(null, "alice", 9, "great", 1L))));
-
-        Movie persistedMovie = movie(10L, dto.getTitle());
-
-        when(movieRepository.existsByTitle(dto.getTitle())).thenReturn(false);
-        when(movieRepository.save(any(Movie.class))).thenReturn(Objects.requireNonNull(persistedMovie));
-        when(movieRepository.findById(10L)).thenReturn(Optional.of(persistedMovie));
-
-        assertThrows(SimulatedFailureException.class, () -> movieService.createWithReviewsNonTransactional(dto, true));
-
-        verify(movieSearchCache).invalidate("MovieService.createWithReviewsNonTransactional");
-        verify(movieByIdCache).invalidate("MovieService.createWithReviewsNonTransactional");
     }
 
     private MovieCreateDto createDto() {

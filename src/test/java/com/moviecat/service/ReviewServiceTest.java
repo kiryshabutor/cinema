@@ -5,17 +5,21 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.moviecat.dto.ReviewCreateItemDto;
 import com.moviecat.dto.ReviewDto;
 import com.moviecat.exception.ResourceNotFoundException;
+import com.moviecat.exception.SimulatedFailureException;
 import com.moviecat.model.Movie;
 import com.moviecat.model.Review;
 import com.moviecat.repository.MovieRepository;
 import com.moviecat.repository.ReviewRepository;
-import java.util.Objects;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -120,6 +124,93 @@ class ReviewServiceTest {
         assertEquals(15L, result.getId());
         assertEquals(7L, result.getMovieId());
         assertEquals(8, result.getRating());
+    }
+
+    @Test
+    void createBulkTransactional_shouldCreateAllReviews() {
+        Movie movie = new Movie();
+        movie.setId(7L);
+        List<ReviewCreateItemDto> items = nn(List.of(
+                new ReviewCreateItemDto("alice", 9, "Great"),
+                new ReviewCreateItemDto("bob", 8, "Good")));
+
+        Review firstSaved = review(15L, "alice", 9, "Great");
+        firstSaved.setMovie(movie);
+        Review secondSaved = review(16L, "bob", 8, "Good");
+        secondSaved.setMovie(movie);
+
+        when(movieRepository.findById(7L)).thenReturn(Optional.of(movie));
+        when(reviewRepository.save(any(Review.class))).thenReturn(firstSaved, secondSaved);
+
+        List<ReviewDto> result = reviewService.createBulkTransactional(7L, items, false);
+
+        assertEquals(2, result.size());
+        assertEquals(15L, result.get(0).getId());
+        assertEquals(7L, result.get(0).getMovieId());
+        assertEquals(16L, result.get(1).getId());
+        verify(reviewRepository, times(2)).save(any(Review.class));
+    }
+
+    @Test
+    void createBulkTransactional_shouldThrow_whenMovieNotFound() {
+        List<ReviewCreateItemDto> items = nn(List.of(new ReviewCreateItemDto("alice", 9, "Great")));
+        when(movieRepository.findById(404L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> reviewService.createBulkTransactional(404L, items, false));
+
+        verify(reviewRepository, never()).save(any(Review.class));
+    }
+
+    @Test
+    void createBulkNonTransactional_shouldSaveFirstReviewBeforeFailureOnSecond() {
+        Movie movie = new Movie();
+        movie.setId(7L);
+        List<ReviewCreateItemDto> items = nn(List.of(
+                new ReviewCreateItemDto("alice", 9, "Great"),
+                new ReviewCreateItemDto("bob", 8, "Good")));
+        Review firstSaved = review(15L, "alice", 9, "Great");
+        firstSaved.setMovie(movie);
+
+        when(movieRepository.findById(7L)).thenReturn(Optional.of(movie));
+        when(reviewRepository.save(any(Review.class))).thenReturn(firstSaved);
+
+        assertThrows(
+                SimulatedFailureException.class,
+                () -> reviewService.createBulkNonTransactional(7L, items, true));
+
+        verify(reviewRepository, times(1)).save(any(Review.class));
+    }
+
+    @Test
+    void createBulkTransactional_shouldFailOnSecondReview_whenFailOnPurposeEnabled() {
+        Movie movie = new Movie();
+        movie.setId(7L);
+        List<ReviewCreateItemDto> items = nn(List.of(
+                new ReviewCreateItemDto("alice", 9, "Great"),
+                new ReviewCreateItemDto("bob", 8, "Good")));
+        Review firstSaved = review(15L, "alice", 9, "Great");
+        firstSaved.setMovie(movie);
+
+        when(movieRepository.findById(7L)).thenReturn(Optional.of(movie));
+        when(reviewRepository.save(any(Review.class))).thenReturn(firstSaved);
+
+        assertThrows(
+                SimulatedFailureException.class,
+                () -> reviewService.createBulkTransactional(7L, items, true));
+
+        verify(reviewRepository, times(1)).save(any(Review.class));
+    }
+
+    @Test
+    void createBulkNonTransactional_shouldReturnEmptyList_whenItemsNull() {
+        Movie movie = new Movie();
+        movie.setId(7L);
+        when(movieRepository.findById(7L)).thenReturn(Optional.of(movie));
+
+        List<ReviewDto> result = reviewService.createBulkNonTransactional(7L, null, false);
+
+        assertEquals(0, result.size());
+        verify(reviewRepository, never()).save(any(Review.class));
     }
 
     private Review review(Long id, String authorAlias, Integer rating, String comment) {

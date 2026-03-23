@@ -1,13 +1,18 @@
 package com.moviecat.service;
 
+import com.moviecat.dto.ReviewCreateItemDto;
 import com.moviecat.dto.ReviewDto;
 import com.moviecat.exception.ResourceNotFoundException;
+import com.moviecat.exception.SimulatedFailureException;
 import com.moviecat.mapper.ReviewMapper;
 import com.moviecat.model.Movie;
 import com.moviecat.model.Review;
-import com.moviecat.repository.ReviewRepository;
 import com.moviecat.repository.MovieRepository;
+import com.moviecat.repository.ReviewRepository;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -68,15 +73,56 @@ public class ReviewService {
         }
 
         Long movieId = Objects.requireNonNull(dto.getMovieId(), "Movie ID is required");
-        Movie movie = movieRepository.findById(movieId)
-                .orElseThrow(() -> new ResourceNotFoundException("Movie not found with id: " + movieId));
-        
+        Movie movie = findMovieById(movieId);
+
         Review review = ReviewMapper.toEntity(dto);
         review.setId(null);
         review.setMovie(movie);
-        
+
         Review savedReview = reviewRepository.save(review);
         return ReviewMapper.toDto(savedReview);
     }
 
+    @Transactional
+    public List<ReviewDto> createBulkTransactional(Long movieId,
+                                                   List<ReviewCreateItemDto> reviewItems,
+                                                   boolean failOnPurpose) {
+        return createBulkInternal(movieId, reviewItems, failOnPurpose);
+    }
+
+    public List<ReviewDto> createBulkNonTransactional(Long movieId,
+                                                      List<ReviewCreateItemDto> reviewItems,
+                                                      boolean failOnPurpose) {
+        return createBulkInternal(movieId, reviewItems, failOnPurpose);
+    }
+
+    private List<ReviewDto> createBulkInternal(Long movieId,
+                                               List<ReviewCreateItemDto> reviewItems,
+                                               boolean failOnPurpose) {
+        Movie movie = findMovieById(movieId);
+        List<ReviewCreateItemDto> safeItems = Optional.ofNullable(reviewItems).orElseGet(List::of);
+
+        List<Review> preparedReviews = safeItems.stream()
+                .map(ReviewMapper::toEntity)
+                .toList();
+
+        List<ReviewDto> createdReviews = new ArrayList<>(preparedReviews.size());
+        for (int i = 0; i < preparedReviews.size(); i++) {
+            if (failOnPurpose && i == preparedReviews.size() - 1) {
+                throw new SimulatedFailureException("Simulated failure during review processing");
+            }
+
+            Review review = preparedReviews.get(i);
+            review.setId(null);
+            review.setMovie(movie);
+            Review savedReview = reviewRepository.save(review);
+            createdReviews.add(ReviewMapper.toDto(savedReview));
+        }
+        return createdReviews;
+    }
+
+    private Movie findMovieById(Long movieId) {
+        return movieRepository.findById(movieId)
+                .orElseThrow(() -> new ResourceNotFoundException("Movie not found with id: " + movieId));
+    }
 }

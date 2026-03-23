@@ -135,7 +135,7 @@ GET /api/movies/search
 - `CACHE INVALIDATED` — кеш очищен после мутаций
 
 Инвалидация movie-кеша:
-- `Movie`: create/update/patch/delete/uploadPoster/createWithReviews* -> полный сброс search/by-id кеша.
+- `Movie`: create/update/patch/delete/uploadPoster -> полный сброс search/by-id кеша.
 - `Director`/`Genre`/`Studio` `update` -> полный сброс только search-кеша + точечный `evict` by-id кеша для связанных фильмов.
 - `Director`/`Genre`/`Studio` `create` и `delete` (когда нет связанных фильмов) -> movie-кеш не сбрасывается.
 
@@ -168,7 +168,7 @@ docker logs -f moviecat-app
 - `GET /api/movies/nplus1-demo` — демонстрация N+1
 - `GET /api/movies/{id}`
 - `POST /api/movies`
-- `POST /api/movies/with-reviews`
+- `POST /api/movies/{movieId}/reviews` (bulk-отзывы)
 - `PUT /api/movies/{id}`
 - `PATCH /api/movies/{id}`
 - `DELETE /api/movies/{id}`
@@ -196,5 +196,13 @@ docker logs -f moviecat-app
 - `GET /api/reviews` (Page)
 - `GET /api/reviews/movie/{movieId}` (Page)
 - `POST /api/reviews`
+
+## Демонстрация транзакционности bulk-операции отзывов
+
+1. Создай тестовый фильм и запомни `movieId`.
+2. Выполни `POST /api/movies/{movieId}/reviews?transactional=false&fail=true` с двумя отзывами.
+3. Проверь БД: в таблице `reviews` останется частично сохраненный результат.
+4. Выполни `POST /api/movies/{movieId}/reviews?transactional=true&fail=true` с аналогичным телом.
+5. Проверь БД снова: для второй операции отзывы откатятся полностью.
 
 Подробные примеры запросов/ответов: [api_endpoints.md](api_endpoints.md).

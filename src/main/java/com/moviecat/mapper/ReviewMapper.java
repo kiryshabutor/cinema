@@ -1,5 +1,6 @@
 package com.moviecat.mapper;
 
+import com.moviecat.dto.ReviewCreateItemDto;
 import com.moviecat.dto.ReviewDto;
 import com.moviecat.model.Review;
 
@@ -23,6 +24,14 @@ public final class ReviewMapper {
     public static Review toEntity(ReviewDto dto) {
         Review review = new Review();
         review.setId(dto.getId());
+        review.setAuthorAlias(dto.getAuthorAlias());
+        review.setRating(dto.getRating());
+        review.setComment(dto.getComment());
+        return review;
+    }
+
+    public static Review toEntity(ReviewCreateItemDto dto) {
+        Review review = new Review();
         review.setAuthorAlias(dto.getAuthorAlias());
         review.setRating(dto.getRating());
         review.setComment(dto.getComment());

@@ -5,8 +5,11 @@ import com.moviecat.dto.MoviePatchDto;
 import com.moviecat.dto.MovieResponseDto;
 import com.moviecat.dto.MovieSearchParams;
 import com.moviecat.dto.MovieUpdateDto;
+import com.moviecat.dto.ReviewCreateItemDto;
+import com.moviecat.dto.ReviewDto;
 import com.moviecat.exception.response.ErrorResponse;
 import com.moviecat.service.MovieService;
+import com.moviecat.service.ReviewService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -62,6 +65,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class MovieController {
 
     private final MovieService movieService;
+    private final ReviewService reviewService;
 
     @GetMapping
     @Operation(
@@ -135,21 +139,23 @@ public class MovieController {
         return ResponseEntity.status(HttpStatus.CREATED).body(movieService.create(dto));
     }
 
-    @PostMapping("/with-reviews")
+    @PostMapping("/{movieId}/reviews")
     @Operation(
-            summary = "Create movie with reviews",
-            description = "Can simulate transactional/non-transactional failure.")
-    public ResponseEntity<MovieResponseDto> createWithReviews(@Valid @RequestBody MovieCreateDto dto,
+            summary = "Bulk create reviews for movie",
+            description = "Creates several reviews for one movie. Can simulate transactional/non-transactional failure.")
+    public ResponseEntity<List<ReviewDto>> createReviewsBulk(
+            @PathVariable @Positive long movieId,
+            @Valid @RequestBody(required = false) List<@Valid ReviewCreateItemDto> reviews,
             @Parameter(description = "Simulate failure on the last review", example = "false")
             @RequestParam(defaultValue = "false") boolean fail,
             @Parameter(description = "Run operation in transaction", example = "true")
             @RequestParam(defaultValue = "true") boolean transactional) {
         if (transactional) {
             return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(movieService.createWithReviewsTransactional(dto, fail));
+                    .body(reviewService.createBulkTransactional(movieId, reviews, fail));
         } else {
             return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(movieService.createWithReviewsNonTransactional(dto, fail));
+                    .body(reviewService.createBulkNonTransactional(movieId, reviews, fail));
         }
     }
 
