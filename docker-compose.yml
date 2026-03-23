@@ -26,5 +26,6 @@ services:
       POSTGRES_PASSWORD: moviecat
     volumes:
       - moviecat-data:/var/lib/postgresql/data
+      
 volumes:
   moviecat-data:
