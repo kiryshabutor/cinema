@@ -43,15 +43,23 @@ jobs:
           SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY }}
           SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION }}
         run: |
-          if [ -z "${SONAR_TOKEN}" ] || [ -z "${SONAR_PROJECT_KEY}" ] || [ -z "${SONAR_ORGANIZATION}" ]; then
+          SONAR_TOKEN_CLEAN="$(printf '%s' "${SONAR_TOKEN}" | tr -d '\r\n')"
+          SONAR_PROJECT_KEY_CLEAN="$(printf '%s' "${SONAR_PROJECT_KEY}" | tr -d '\r\n')"
+          SONAR_ORGANIZATION_CLEAN="$(printf '%s' "${SONAR_ORGANIZATION}" | tr -d '\r\n')"
+
+          if [ -z "${SONAR_TOKEN_CLEAN}" ] || [ -z "${SONAR_PROJECT_KEY_CLEAN}" ] || [ -z "${SONAR_ORGANIZATION_CLEAN}" ]; then
             echo "::warning::SonarCloud scan was skipped."
             echo "::warning::Set SONAR_TOKEN secret and SONAR_PROJECT_KEY / SONAR_ORGANIZATION variables."
             exit 0
           fi
 
+          if [ "${SONAR_TOKEN}" != "${SONAR_TOKEN_CLEAN}" ]; then
+            echo "::warning::SONAR_TOKEN contains line breaks. Sanitized token will be used."
+          fi
+
           mvn -B sonar:sonar \
             -Dsonar.host.url="${SONAR_HOST_URL}" \
-            -Dsonar.token="${SONAR_TOKEN}" \
-            -Dsonar.projectKey="${SONAR_PROJECT_KEY}" \
-            -Dsonar.organization="${SONAR_ORGANIZATION}" \
+            -Dsonar.token="${SONAR_TOKEN_CLEAN}" \
+            -Dsonar.projectKey="${SONAR_PROJECT_KEY_CLEAN}" \
+            -Dsonar.organization="${SONAR_ORGANIZATION_CLEAN}" \
             -Dsonar.coverage.inclusions="${SONAR_COVERAGE_INCLUSIONS}"
