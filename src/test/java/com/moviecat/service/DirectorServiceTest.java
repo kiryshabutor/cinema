@@ -104,6 +104,35 @@ class DirectorServiceTest {
     }
 
     @Test
+    void create_shouldAllowNullRequiredNames_whenRepositoryDoesNotReportDuplicate() {
+        Director input = director(null, null, null, null);
+        Director saved = director(11L, null, null, null);
+        when(directorRepository.existsByLastNameAndFirstNameAndMiddleName(null, null, null))
+                .thenReturn(false);
+        when(directorRepository.save(input)).thenReturn(saved);
+
+        Director result = directorService.create(input);
+
+        assertEquals(11L, result.getId());
+        assertNull(result.getLastName());
+        assertNull(result.getFirstName());
+        assertNull(result.getMiddleName());
+    }
+
+    @Test
+    void create_shouldThrow_whenDuplicateNameWithMiddleName() {
+        Director input = director(null, "Nolan", "Christopher", "James");
+        when(directorRepository.existsByLastNameAndFirstNameAndMiddleName("Nolan", "Christopher", "James"))
+                .thenReturn(true);
+
+        ResourceAlreadyExistsException ex =
+                assertThrows(ResourceAlreadyExistsException.class, () -> directorService.create(input));
+
+        assertEquals("Director with name 'Nolan Christopher James' already exists", ex.getMessage());
+        verify(directorRepository, never()).save(input);
+    }
+
+    @Test
     void update_shouldUpdateDirectorAndInvalidateRelatedCaches() {
         Long id = 2L;
         Director existing = director(id, "Old", "Name", "M");

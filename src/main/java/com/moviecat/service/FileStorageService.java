@@ -7,6 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -15,7 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 public class FileStorageService {
 
-    private final Path uploadDir = Paths.get("uploads");
+    private final Path uploadDir;
     private static final Set<String> ALLOWED_EXTENSIONS = Set.of(".jpg", ".jpeg", ".png", ".webp", ".gif");
 
     private boolean isValidExtension(String extension) {
@@ -23,6 +24,11 @@ public class FileStorageService {
     }
 
     public FileStorageService() {
+        this(Paths.get("uploads"));
+    }
+
+    FileStorageService(Path uploadDir) {
+        this.uploadDir = Objects.requireNonNull(uploadDir, "uploadDir");
         try {
             Files.createDirectories(uploadDir);
         } catch (IOException e) {

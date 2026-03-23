@@ -10,6 +10,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
@@ -132,6 +133,30 @@ class MovieServiceTest {
     }
 
     @Test
+    void getAll_shouldReturnMappedMovies() {
+        Movie movie = movie(1L, "Interstellar");
+        when(movieRepository.findAllWithDetails()).thenReturn(nn(List.of(movie)));
+
+        List<MovieResponseDto> result = movieService.getAll();
+
+        assertEquals(1, result.size());
+        assertEquals(1L, result.get(0).getId());
+        assertEquals("Interstellar", result.get(0).getTitle());
+    }
+
+    @Test
+    void getAllNPlusOneDemo_shouldReturnMappedMovies() {
+        Movie movie = movie(2L, "Memento");
+        when(movieRepository.findAll()).thenReturn(nn(List.of(movie)));
+
+        List<MovieResponseDto> result = movieService.getAllNPlusOneDemo();
+
+        assertEquals(1, result.size());
+        assertEquals(2L, result.get(0).getId());
+        assertEquals("Memento", result.get(0).getTitle());
+    }
+
+    @Test
     void searchAdvanced_shouldReturnCachedPage_whenCacheHit() {
         MovieSearchParams params = new MovieSearchParams("title", "", "", "", 0, 10, "title", "asc", false);
         Page<MovieResponseDto> cached = new PageImpl<>(nn(List.of(new MovieResponseDto())));
@@ -195,6 +220,24 @@ class MovieServiceTest {
         verify(movieRepository).searchAdvancedNative(anyString(), anyString(), anyString(), anyString(), anyString(),
                 anyString(), any(Pageable.class));
         verify(movieRepository, never()).searchAdvancedJpql(anyString(), anyString(), anyString(), anyString(), any());
+    }
+
+    @Test
+    void searchAdvanced_shouldNormalizeNullFilters() {
+        MovieSearchParams params = new MovieSearchParams(null, null, null, null, 0, 10, "title", "asc", false);
+        when(movieSearchCache.get(any(MovieSearchKey.class))).thenReturn(null);
+        when(movieRepository.searchAdvancedJpql(anyString(), anyString(), anyString(), anyString(), any(Pageable.class)))
+                .thenReturn(Page.empty());
+
+        movieService.searchAdvanced(params);
+
+        ArgumentCaptor<MovieSearchKey> keyCaptor = ArgumentCaptor.forClass(MovieSearchKey.class);
+        verify(movieSearchCache).get(keyCaptor.capture());
+        MovieSearchKey key = keyCaptor.getValue();
+        assertEquals("", key.titleNormalized());
+        assertEquals("", key.directorLastNameNormalized());
+        assertEquals("", key.genreNameNormalized());
+        assertEquals("", key.studioTitleNormalized());
     }
 
     @Test
@@ -262,6 +305,41 @@ class MovieServiceTest {
     }
 
     @Test
+    void create_shouldThrow_whenDirectorMissing() {
+        MovieCreateDto dto = createDto();
+        dto.setDirectorId(99L);
+        when(movieRepository.existsByTitle(dto.getTitle())).thenReturn(false);
+        when(directorRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> movieService.create(dto));
+    }
+
+    @Test
+    void create_shouldThrow_whenStudioMissing() {
+        MovieCreateDto dto = createDto();
+        dto.setStudioId(77L);
+        when(movieRepository.existsByTitle(dto.getTitle())).thenReturn(false);
+        when(studioRepository.findById(77L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> movieService.create(dto));
+    }
+
+    @Test
+    void create_shouldSkipGenresLookup_whenGenreIdsEmpty() {
+        MovieCreateDto dto = createDto();
+        dto.setGenreIds(Set.of());
+
+        Movie saved = movie(200L, dto.getTitle());
+        when(movieRepository.existsByTitle(dto.getTitle())).thenReturn(false);
+        when(movieRepository.save(any(Movie.class))).thenReturn(saved);
+
+        MovieResponseDto result = movieService.create(dto);
+
+        assertEquals(200L, result.getId());
+        verify(genreRepository, never()).findAllById(any());
+    }
+
+    @Test
     void update_shouldReplaceFieldsAndInvalidateCaches() {
         Long movieId = 10L;
         Movie existing = movie(movieId, "Old");
@@ -296,6 +374,116 @@ class MovieServiceTest {
         assertTrue(existing.getGenres().isEmpty());
         verify(movieSearchCache).invalidate("MovieService.update movieId=10");
         verify(movieByIdCache).invalidate("MovieService.update movieId=10");
+    }
+
+    @Test
+    void update_shouldSetDirectorStudioAndGenres_whenIdsProvided() {
+        Long movieId = 12L;
+        Movie existing = movie(movieId, "Old");
+
+        MovieUpdateDto dto = new MovieUpdateDto();
+        dto.setTitle("Updated");
+        dto.setYear(2025);
+        dto.setDuration(121);
+        dto.setViewCount(42L);
+        dto.setDirectorId(5L);
+        dto.setStudioId(6L);
+        Set<Long> genreIds = nn(Set.of(7L));
+        dto.setGenreIds(genreIds);
+
+        Director director = new Director();
+        director.setId(5L);
+        Studio studio = new Studio();
+        studio.setId(6L);
+        Genre genre = new Genre();
+        genre.setId(7L);
+
+        when(movieRepository.findByIdWithDetails(movieId)).thenReturn(Optional.of(existing));
+        when(movieRepository.existsByTitle("Updated")).thenReturn(false);
+        when(directorRepository.findById(5L)).thenReturn(Optional.of(director));
+        when(studioRepository.findById(6L)).thenReturn(Optional.of(studio));
+        when(genreRepository.findAllById(genreIds)).thenReturn(nn(List.of(genre)));
+        when(movieRepository.save(existing)).thenReturn(existing);
+
+        MovieResponseDto result = movieService.update(movieId, dto);
+
+        assertEquals("Updated", result.getTitle());
+        assertSame(director, existing.getDirector());
+        assertSame(studio, existing.getStudio());
+        assertEquals(1, existing.getGenres().size());
+    }
+
+    @Test
+    void update_shouldNotCheckTitleUniqueness_whenTitleUnchanged() {
+        Long movieId = 13L;
+        Movie existing = movie(movieId, "Same title");
+
+        MovieUpdateDto dto = new MovieUpdateDto();
+        dto.setTitle("Same title");
+        dto.setYear(2020);
+        dto.setDuration(111);
+        dto.setViewCount(3L);
+        dto.setDirectorId(null);
+        dto.setStudioId(null);
+        dto.setGenreIds(null);
+
+        when(movieRepository.findByIdWithDetails(movieId)).thenReturn(Optional.of(existing));
+        when(movieRepository.save(existing)).thenReturn(existing);
+
+        movieService.update(movieId, dto);
+
+        verify(movieRepository, never()).existsByTitle(anyString());
+    }
+
+    @Test
+    void update_shouldThrow_whenMovieMissing() {
+        MovieUpdateDto dto = new MovieUpdateDto();
+        dto.setTitle("Title");
+        dto.setYear(2020);
+        dto.setDuration(100);
+        dto.setViewCount(1L);
+
+        when(movieRepository.findByIdWithDetails(404L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> movieService.update(404L, dto));
+    }
+
+    @Test
+    void update_shouldThrow_whenDirectorMissingAndDirectorIdProvided() {
+        Long movieId = 14L;
+        Movie existing = movie(movieId, "Old");
+
+        MovieUpdateDto dto = new MovieUpdateDto();
+        dto.setTitle("Updated");
+        dto.setYear(2020);
+        dto.setDuration(101);
+        dto.setViewCount(2L);
+        dto.setDirectorId(55L);
+
+        when(movieRepository.findByIdWithDetails(movieId)).thenReturn(Optional.of(existing));
+        when(movieRepository.existsByTitle("Updated")).thenReturn(false);
+        when(directorRepository.findById(55L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> movieService.update(movieId, dto));
+    }
+
+    @Test
+    void update_shouldThrow_whenStudioMissingAndStudioIdProvided() {
+        Long movieId = 15L;
+        Movie existing = movie(movieId, "Old");
+
+        MovieUpdateDto dto = new MovieUpdateDto();
+        dto.setTitle("Updated");
+        dto.setYear(2020);
+        dto.setDuration(101);
+        dto.setViewCount(2L);
+        dto.setStudioId(66L);
+
+        when(movieRepository.findByIdWithDetails(movieId)).thenReturn(Optional.of(existing));
+        when(movieRepository.existsByTitle("Updated")).thenReturn(false);
+        when(studioRepository.findById(66L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> movieService.update(movieId, dto));
     }
 
     @Test
@@ -356,6 +544,66 @@ class MovieServiceTest {
         assertEquals(1, result.getGenres().size());
         verify(movieSearchCache).invalidate("MovieService.patch movieId=10");
         verify(movieByIdCache).invalidate("MovieService.patch movieId=10");
+    }
+
+    @Test
+    void patch_shouldKeepExistingRelations_whenIdsAreNotProvided() {
+        Long movieId = 11L;
+        Movie existing = movie(movieId, "Matrix");
+        Director director = new Director();
+        director.setId(1L);
+        Studio studio = new Studio();
+        studio.setId(2L);
+        Genre genre = new Genre();
+        genre.setId(3L);
+        existing.setDirector(director);
+        existing.setStudio(studio);
+        existing.setGenres(new HashSet<>(nn(List.of(genre))));
+
+        MoviePatchDto dto = new MoviePatchDto();
+        dto.setYear(2001);
+
+        when(movieRepository.findByIdWithDetails(movieId)).thenReturn(Optional.of(existing));
+        when(movieRepository.save(existing)).thenReturn(existing);
+
+        movieService.patch(movieId, dto);
+
+        assertSame(director, existing.getDirector());
+        assertSame(studio, existing.getStudio());
+        assertEquals(1, existing.getGenres().size());
+    }
+
+    @Test
+    void patch_shouldThrow_whenMovieMissing() {
+        when(movieRepository.findByIdWithDetails(404L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> movieService.patch(404L, new MoviePatchDto()));
+    }
+
+    @Test
+    void patch_shouldThrow_whenDirectorMissingAndDirectorIdProvided() {
+        Long movieId = 12L;
+        Movie existing = movie(movieId, "Patch");
+        MoviePatchDto dto = new MoviePatchDto();
+        dto.setDirectorId(10L);
+
+        when(movieRepository.findByIdWithDetails(movieId)).thenReturn(Optional.of(existing));
+        when(directorRepository.findById(10L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> movieService.patch(movieId, dto));
+    }
+
+    @Test
+    void patch_shouldThrow_whenStudioMissingAndStudioIdProvided() {
+        Long movieId = 13L;
+        Movie existing = movie(movieId, "Patch");
+        MoviePatchDto dto = new MoviePatchDto();
+        dto.setStudioId(20L);
+
+        when(movieRepository.findByIdWithDetails(movieId)).thenReturn(Optional.of(existing));
+        when(studioRepository.findById(20L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> movieService.patch(movieId, dto));
     }
 
     @Test
@@ -423,6 +671,82 @@ class MovieServiceTest {
         assertEquals("year", params.getSort());
         assertEquals("desc", params.getDirection());
         assertTrue(params.isNativeQuery());
+    }
+
+    @Test
+    void createWithReviewsTransactional_shouldReturnMovie_whenReviewsAreNull() {
+        MovieCreateDto dto = createDto();
+        Movie persistedMovie = movie(10L, dto.getTitle());
+
+        when(movieRepository.existsByTitle(dto.getTitle())).thenReturn(false);
+        when(movieRepository.save(any(Movie.class))).thenReturn(Objects.requireNonNull(persistedMovie));
+        when(movieRepository.findById(10L)).thenReturn(Optional.of(persistedMovie));
+
+        MovieResponseDto result = movieService.createWithReviewsTransactional(dto, false);
+
+        assertEquals(10L, result.getId());
+        verify(movieRepository, times(1)).save(any(Movie.class));
+        verify(movieSearchCache).invalidate("MovieService.createWithReviewsTransactional");
+        verify(movieByIdCache).invalidate("MovieService.createWithReviewsTransactional");
+    }
+
+    @Test
+    void createWithReviewsNonTransactional_shouldReturnMovie_whenReviewsAreEmpty() {
+        MovieCreateDto dto = createDto();
+        dto.setReviews(List.of());
+        Movie persistedMovie = movie(10L, dto.getTitle());
+
+        when(movieRepository.existsByTitle(dto.getTitle())).thenReturn(false);
+        when(movieRepository.save(any(Movie.class))).thenReturn(Objects.requireNonNull(persistedMovie));
+        when(movieRepository.findById(10L)).thenReturn(Optional.of(persistedMovie));
+
+        MovieResponseDto result = movieService.createWithReviewsNonTransactional(dto, false);
+
+        assertEquals(10L, result.getId());
+        verify(movieRepository, times(1)).save(any(Movie.class));
+        verify(movieSearchCache).invalidate("MovieService.createWithReviewsNonTransactional");
+        verify(movieByIdCache).invalidate("MovieService.createWithReviewsNonTransactional");
+    }
+
+    @Test
+    void createWithReviewsNonTransactional_shouldSaveFirstReviewBeforeFailureOnSecond() {
+        MovieCreateDto dto = createDto();
+        dto.setReviews(nn(List.of(
+                new ReviewDto(null, "alice", 9, "great", 1L),
+                new ReviewDto(null, "bob", 8, "good", 1L))));
+
+        Movie persistedMovie = movie(10L, dto.getTitle());
+
+        when(movieRepository.existsByTitle(dto.getTitle())).thenReturn(false);
+        when(movieRepository.save(any(Movie.class))).thenReturn(Objects.requireNonNull(persistedMovie));
+        when(movieRepository.findById(10L)).thenReturn(Optional.of(persistedMovie));
+
+        assertThrows(SimulatedFailureException.class, () -> movieService.createWithReviewsNonTransactional(dto, true));
+
+        assertEquals(1, persistedMovie.getReviews().size());
+        verify(movieRepository, times(2)).save(any(Movie.class));
+        verify(movieSearchCache).invalidate("MovieService.createWithReviewsNonTransactional");
+        verify(movieByIdCache).invalidate("MovieService.createWithReviewsNonTransactional");
+    }
+
+    @Test
+    void createWithReviewsTransactional_shouldProcessReviews_whenFailOnPurposeIsFalse() {
+        MovieCreateDto dto = createDto();
+        dto.setReviews(nn(List.of(new ReviewDto(null, "alice", 9, "great", 1L))));
+
+        Movie persistedMovie = movie(10L, dto.getTitle());
+
+        when(movieRepository.existsByTitle(dto.getTitle())).thenReturn(false);
+        when(movieRepository.save(any(Movie.class))).thenReturn(Objects.requireNonNull(persistedMovie));
+        when(movieRepository.findById(10L)).thenReturn(Optional.of(persistedMovie));
+
+        MovieResponseDto result = movieService.createWithReviewsTransactional(dto, false);
+
+        assertEquals(10L, result.getId());
+        assertEquals(1, persistedMovie.getReviews().size());
+        verify(movieRepository, times(2)).save(any(Movie.class));
+        verify(movieSearchCache).invalidate("MovieService.createWithReviewsTransactional");
+        verify(movieByIdCache).invalidate("MovieService.createWithReviewsTransactional");
     }
 
     @Test
