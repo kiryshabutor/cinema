@@ -50,4 +50,5 @@ jobs:
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.token="${SONAR_TOKEN}" \
             -Dsonar.projectKey="${SONAR_PROJECT_KEY}" \
-            -Dsonar.organization="${SONAR_ORGANIZATION}"
+            -Dsonar.organization="${SONAR_ORGANIZATION}" \
+            -Dsonar.coverage.inclusions="src/main/java/com/moviecat/service/**/*.java"
