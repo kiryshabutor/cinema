@@ -19,7 +19,7 @@ jobs:
       pull-requests: read
     env:
       SONAR_HOST_URL: https://sonarcloud.io
-      SONAR_COVERAGE_INCLUSIONS: src/main/java/com/moviecat/service/**/*.java
+      SONAR_COVERAGE_INCLUSIONS: src/main/java/com/moviecat/service/*Service.java,src/main/java/com/moviecat/service/**/*Service.java
 
     steps:
       - name: Checkout
