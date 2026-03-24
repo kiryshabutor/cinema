@@ -53,6 +53,9 @@ public class ReviewService {
 
     @Transactional(readOnly = true)
     public Page<ReviewDto> getByMovieId(Long movieId, int page, int size, String sort, String direction) {
+        Long safeMovieId = Objects.requireNonNull(movieId, "Movie ID is required");
+        findMovieById(safeMovieId);
+
         int normalizedPage = PagingSortingUtils.normalizePage(page, DEFAULT_PAGE);
         int normalizedSize = PagingSortingUtils.normalizeSize(size, DEFAULT_SIZE, MAX_SIZE);
         String normalizedSort = PagingSortingUtils.normalizeSort(
@@ -63,7 +66,7 @@ public class ReviewService {
                 normalizedPage,
                 normalizedSize,
                 PagingSortingUtils.buildSort(normalizedSort, normalizedDirection, DESC_DIRECTION));
-        return reviewRepository.findByMovieId(movieId, pageRequest).map(ReviewMapper::toDto);
+        return reviewRepository.findByMovieId(safeMovieId, pageRequest).map(ReviewMapper::toDto);
     }
 
     @Transactional

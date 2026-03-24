@@ -76,13 +76,24 @@ class ReviewServiceTest {
         PageRequest expectedRequest = PageRequest.of(1, 20, PagingSortingUtils.buildSort("rating", "desc", "desc"));
         Page<Review> reviewPage = new PageImpl<>(nn(List.of(review)));
 
+        when(movieRepository.findById(9L)).thenReturn(Optional.of(movie));
         when(reviewRepository.findByMovieId(9L, expectedRequest)).thenReturn(reviewPage);
 
         Page<ReviewDto> result = reviewService.getByMovieId(9L, 1, 20, "rating", "desc");
 
         assertEquals(1, result.getContent().size());
         assertEquals(7, result.getContent().get(0).getRating());
+        verify(movieRepository).findById(9L);
         verify(reviewRepository).findByMovieId(9L, expectedRequest);
+    }
+
+    @Test
+    void getByMovieId_shouldThrow_whenMovieNotFound() {
+        when(movieRepository.findById(111L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> reviewService.getByMovieId(111L, 0, 10, "id", "asc"));
+
+        verify(reviewRepository, never()).findByMovieId(any(), any(PageRequest.class));
     }
 
     @Test
