@@ -30,6 +30,7 @@ public class ReviewService {
     private static final String DEFAULT_SORT_FIELD = "id";
     private static final String DEFAULT_DIRECTION = "asc";
     private static final String DESC_DIRECTION = "desc";
+    private static final String MOVIE_ID_REQUIRED_MSG = "Movie ID is required";
     private static final Set<String> ALLOWED_SORT_FIELDS =
             Set.of(DEFAULT_SORT_FIELD, "authorAlias", "rating", "comment");
 
@@ -53,7 +54,7 @@ public class ReviewService {
 
     @Transactional(readOnly = true)
     public Page<ReviewDto> getByMovieId(Long movieId, int page, int size, String sort, String direction) {
-        Long safeMovieId = Objects.requireNonNull(movieId, "Movie ID is required");
+        Long safeMovieId = Objects.requireNonNull(movieId, MOVIE_ID_REQUIRED_MSG);
         findMovieById(safeMovieId);
 
         int normalizedPage = PagingSortingUtils.normalizePage(page, DEFAULT_PAGE);
@@ -75,7 +76,7 @@ public class ReviewService {
             throw new IllegalArgumentException("Movie ID is required for a review");
         }
 
-        Long movieId = Objects.requireNonNull(dto.getMovieId(), "Movie ID is required");
+        Long movieId = Objects.requireNonNull(dto.getMovieId(), MOVIE_ID_REQUIRED_MSG);
         Movie movie = findMovieById(movieId);
 
         Review review = ReviewMapper.toEntity(dto);
@@ -125,7 +126,7 @@ public class ReviewService {
     }
 
     private Movie findMovieById(Long movieId) {
-        Long safeMovieId = Objects.requireNonNull(movieId, "Movie ID is required");
+        Long safeMovieId = Objects.requireNonNull(movieId, MOVIE_ID_REQUIRED_MSG);
         return movieRepository.findById(safeMovieId)
                 .orElseThrow(() -> new ResourceNotFoundException("Movie not found with id: " + safeMovieId));
     }
