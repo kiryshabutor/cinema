@@ -2,6 +2,7 @@ package com.moviecat.exception;
 
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import com.moviecat.exception.response.ErrorResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
@@ -34,27 +35,32 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleMethodArgumentNotValidException(
-            MethodArgumentNotValidException exception) {
+            MethodArgumentNotValidException exception,
+            HttpServletRequest request) {
         Map<String, String> errors = new LinkedHashMap<>();
         for (FieldError fieldError : exception.getBindingResult().getFieldErrors()) {
             errors.put(fieldError.getField(), fieldError.getDefaultMessage());
         }
+        logBadRequest(request, VALIDATION_FAILED, errors);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(buildErrorResponse(HttpStatus.BAD_REQUEST, VALIDATION_FAILED, errors));
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ErrorResponse> handleMethodArgumentTypeMismatchException(
-            MethodArgumentTypeMismatchException exception) {
+            MethodArgumentTypeMismatchException exception,
+            HttpServletRequest request) {
         String message = "Invalid value '%s' for parameter '%s'"
                 .formatted(exception.getValue(), exception.getName());
+        logBadRequest(request, message, null);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(buildErrorResponse(HttpStatus.BAD_REQUEST, message));
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorResponse> handleHttpMessageNotReadableException(
-            HttpMessageNotReadableException exception) {
+            HttpMessageNotReadableException exception,
+            HttpServletRequest request) {
         Throwable cause = exception.getMostSpecificCause();
         String message = "Malformed JSON request";
         if (cause instanceof InvalidFormatException invalidFormatException
@@ -63,13 +69,15 @@ public class GlobalExceptionHandler {
             String fieldName = invalidFormatException.getPath().get(0).getFieldName();
             message = "Invalid value for field '%s'".formatted(fieldName);
         }
+        logBadRequest(request, message, null);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(buildErrorResponse(HttpStatus.BAD_REQUEST, message));
     }
 
     @ExceptionHandler(HandlerMethodValidationException.class)
     public ResponseEntity<ErrorResponse> handleHandlerMethodValidationException(
-            HandlerMethodValidationException exception) {
+            HandlerMethodValidationException exception,
+            HttpServletRequest request) {
         Map<String, String> errors = new LinkedHashMap<>();
         exception.getParameterValidationResults().forEach(result -> {
             String parameterName = result.getMethodParameter().getParameterName();
@@ -83,24 +91,28 @@ public class GlobalExceptionHandler {
         });
 
         if (errors.isEmpty()) {
+            logBadRequest(request, VALIDATION_FAILED, null);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(buildErrorResponse(HttpStatus.BAD_REQUEST, VALIDATION_FAILED));
         }
+        logBadRequest(request, VALIDATION_FAILED, errors);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(buildErrorResponse(HttpStatus.BAD_REQUEST, VALIDATION_FAILED, errors));
     }
 
     @ExceptionHandler({IllegalArgumentException.class, ConstraintViolationException.class})
-    public ResponseEntity<ErrorResponse> handleBadRequest(RuntimeException exception) {
+    public ResponseEntity<ErrorResponse> handleBadRequest(RuntimeException exception, HttpServletRequest request) {
         if (exception instanceof ConstraintViolationException constraintViolationException) {
             Map<String, String> errors = new LinkedHashMap<>();
             constraintViolationException.getConstraintViolations().forEach(violation ->
                     errors.put(violation.getPropertyPath().toString(), violation.getMessage()));
+            logBadRequest(request, VALIDATION_FAILED, errors);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(buildErrorResponse(HttpStatus.BAD_REQUEST, VALIDATION_FAILED, errors));
         }
 
         String message = exception.getMessage() != null ? exception.getMessage() : "Bad request";
+        logBadRequest(request, message, null);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(buildErrorResponse(HttpStatus.BAD_REQUEST, message));
     }
@@ -128,5 +140,15 @@ public class GlobalExceptionHandler {
             return fallback;
         }
         return message;
+    }
+
+    private void logBadRequest(HttpServletRequest request, String message, Map<String, String> errors) {
+        String method = request.getMethod();
+        String uri = request.getRequestURI();
+        if (errors == null || errors.isEmpty()) {
+            log.warn("Bad request 400 on {} {}: {}", method, uri, message);
+            return;
+        }
+        log.warn("Bad request 400 on {} {}: {}, errors={}", method, uri, message, errors);
     }
 }
