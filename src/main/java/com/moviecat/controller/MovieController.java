@@ -6,10 +6,10 @@ import com.moviecat.dto.MovieResponseDto;
 import com.moviecat.dto.MovieSearchParams;
 import com.moviecat.dto.MovieUpdateDto;
 import com.moviecat.dto.ReviewCreateItemDto;
-import com.moviecat.dto.ReviewDto;
+import com.moviecat.dto.TaskStartResponseDto;
 import com.moviecat.exception.response.ErrorResponse;
 import com.moviecat.service.MovieService;
-import com.moviecat.service.ReviewService;
+import com.moviecat.service.task.ReviewTaskService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -67,7 +67,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class MovieController {
 
     private final MovieService movieService;
-    private final ReviewService reviewService;
+    private final ReviewTaskService reviewTaskService;
 
     @GetMapping
     @Operation(
@@ -147,25 +147,23 @@ public class MovieController {
         return ResponseEntity.status(HttpStatus.CREATED).body(movieService.create(dto));
     }
 
-    @PostMapping("/{movieId}/reviews")
+    @PostMapping("/{movieId}/reviews/async")
     @Operation(
-            summary = "Bulk create reviews for movie",
-            description = "Creates several reviews for one movie. Can simulate transactional/"
-                    + "non-transactional failure.")
-    public ResponseEntity<List<ReviewDto>> createReviewsBulk(
+            summary = "Start async bulk create reviews for movie",
+            description = "Runs bulk review creation asynchronously and returns task ID for status checks.")
+    public ResponseEntity<TaskStartResponseDto> createReviewsBulkAsync(
             @PathVariable @Positive long movieId,
             @Valid @RequestBody(required = false) List<@Valid ReviewCreateItemDto> reviews,
             @Parameter(description = "Simulate failure on the last review", example = "false")
             @RequestParam(defaultValue = "false") boolean fail,
-            @Parameter(description = "Run operation in transaction", example = "true")
-            @RequestParam(defaultValue = "true") boolean transactional) {
-        if (transactional) {
-            return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(reviewService.createBulkTransactional(movieId, reviews, fail));
-        } else {
-            return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(reviewService.createBulkNonTransactional(movieId, reviews, fail));
-        }
+            @Parameter(description = "Delay in seconds before task switches from CREATED to RUNNING", example = "0")
+            @Min(value = 0, message = "startDelaySec must be greater than or equal to 0")
+            @RequestParam(defaultValue = "0") int startDelaySec,
+            @Parameter(description = "Delay in seconds before processing each review item", example = "0")
+            @Min(value = 0, message = "itemDelaySec must be greater than or equal to 0")
+            @RequestParam(defaultValue = "0") int itemDelaySec) {
+        return ResponseEntity.status(HttpStatus.ACCEPTED)
+                .body(reviewTaskService.startBulkCreateTask(movieId, reviews, fail, startDelaySec, itemDelaySec));
     }
 
     @PutMapping("/{id}")

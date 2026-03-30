@@ -37,6 +37,7 @@ public class OpenApiConfig {
                         new Tag().name("Directors").description("Director management"),
                         new Tag().name("Genres").description("Genre management"),
                         new Tag().name("Studios").description("Studio management"),
-                        new Tag().name("Reviews").description("Review management")));
+                        new Tag().name("Reviews").description("Review management"),
+                        new Tag().name("Tasks").description("Asynchronous task management")));
     }
 }

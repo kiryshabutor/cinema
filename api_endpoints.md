@@ -135,14 +135,15 @@
 
 **Response (201 Created):** `MovieResponseDto`
 
-### 6) Bulk создать отзывы для фильма
+### 6) Запустить async bulk создание отзывов для фильма
 
-`POST /api/movies/{movieId}/reviews?fail=false&transactional=true`
+`POST /api/movies/{movieId}/reviews/async?fail=false&startDelaySec=0&itemDelaySec=0`
 
 - `movieId` берется из path.
 - `fail=true`: симуляция ошибки на последнем отзыве.
-- `transactional=true` (по умолчанию): при ошибке откатывается вся bulk-операция.
-- `transactional=false`: частичное сохранение возможно.
+- `startDelaySec`: задержка в секундах перед переходом `CREATED -> RUNNING`.
+- `itemDelaySec`: задержка в секундах перед обработкой каждого элемента.
+- Операция выполняется асинхронно и всегда транзакционно.
 
 **Request:** `List<ReviewCreateItemDto>`
 
@@ -155,7 +156,14 @@
 ]
 ```
 
-**Response (201 Created):** `List<ReviewDto>`
+**Response (202 Accepted):**
+
+```json
+{
+  "taskId": 1,
+  "status": "CREATED"
+}
+```
 
 ### 7) Полное обновление фильма
 
@@ -438,15 +446,38 @@
 
 - `movieId` обязателен и должен существовать в БД (`404`, если фильм не найден).
 
-### 4) Bulk создать отзывы по фильму
+### 4) Запустить async bulk создание отзывов по фильму
 
-`POST /api/movies/{movieId}/reviews?fail=false&transactional=true`
+`POST /api/movies/{movieId}/reviews/async?fail=false&startDelaySec=0&itemDelaySec=0`
 
 - Тело запроса: `List<ReviewCreateItemDto>`
 - `movieId` берется из path.
-- `transactional=true`: при `fail=true` откатывается вся bulk-операция.
-- `transactional=false`: при `fail=true` в БД остается частично сохраненный результат.
+- `fail=true`: симуляция ошибки на последнем элементе.
+- По `taskId` можно отслеживать выполнение через `GET /api/tasks/{taskId}`.
 - Полный пример запроса см. в разделе Movies, пункт 6.
+
+---
+
+## Tasks
+
+### 1) Получить статус async-задачи
+
+`GET /api/tasks/{taskId}`
+
+**Response (200 OK):**
+
+```json
+{
+  "taskId": 1,
+  "status": "RUNNING",
+  "createdAt": "2026-03-30T19:00:00",
+  "startedAt": "2026-03-30T19:00:02",
+  "finishedAt": null,
+  "totalCount": 2,
+  "processedCount": 1,
+  "errorMessage": null
+}
+```
 
 ---
 

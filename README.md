@@ -168,7 +168,7 @@ docker logs -f moviecat-app
 - `GET /api/movies/nplus1-demo` — демонстрация N+1
 - `GET /api/movies/{id}`
 - `POST /api/movies`
-- `POST /api/movies/{movieId}/reviews` (bulk-отзывы)
+- `POST /api/movies/{movieId}/reviews/async` (асинхронный bulk отзывов)
 - `PUT /api/movies/{id}`
 - `PATCH /api/movies/{id}`
 - `DELETE /api/movies/{id}`
@@ -197,12 +197,15 @@ docker logs -f moviecat-app
 - `GET /api/reviews/movie/{movieId}` (Page)
 - `POST /api/reviews`
 
-## Демонстрация транзакционности bulk-операции отзывов
+### Tasks
+- `GET /api/tasks/{taskId}` (статус async-задачи)
+
+## Демонстрация async bulk-операции отзывов
 
 1. Создай тестовый фильм и запомни `movieId`.
-2. Выполни `POST /api/movies/{movieId}/reviews?transactional=false&fail=true` с двумя отзывами.
-3. Проверь БД: в таблице `reviews` останется частично сохраненный результат.
-4. Выполни `POST /api/movies/{movieId}/reviews?transactional=true&fail=true` с аналогичным телом.
-5. Проверь БД снова: для второй операции отзывы откатятся полностью.
+2. Запусти задачу: `POST /api/movies/{movieId}/reviews/async?fail=false&startDelaySec=1&itemDelaySec=1`.
+3. Получи `taskId` из ответа (`202 Accepted`).
+4. Опрашивай `GET /api/tasks/{taskId}` и наблюдай переходы `CREATED -> RUNNING -> COMPLETED`.
+5. Для проверки rollback запусти задачу с `fail=true` и убедись, что статус становится `FAILED`.
 
 Подробные примеры запросов/ответов: [api_endpoints.md](api_endpoints.md).
