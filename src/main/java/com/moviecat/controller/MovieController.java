@@ -7,6 +7,8 @@ import com.moviecat.dto.MovieSearchParams;
 import com.moviecat.dto.MovieUpdateDto;
 import com.moviecat.dto.ReviewCreateItemDto;
 import com.moviecat.dto.TaskStartResponseDto;
+import com.moviecat.dto.ViewCountResponseDto;
+import com.moviecat.dto.ViewRaceDemoResponseDto;
 import com.moviecat.exception.response.ErrorResponse;
 import com.moviecat.service.MovieService;
 import com.moviecat.service.task.ReviewTaskService;
@@ -164,6 +166,35 @@ public class MovieController {
             @RequestParam(defaultValue = "0") int itemDelaySec) {
         return ResponseEntity.status(HttpStatus.ACCEPTED)
                 .body(reviewTaskService.startBulkCreateTask(movieId, reviews, fail, startDelaySec, itemDelaySec));
+    }
+
+    @PostMapping("/{id}/views")
+    @Operation(summary = "Increment movie view counter by 1")
+    public ResponseEntity<ViewCountResponseDto> incrementViewCount(@PathVariable @Positive long id) {
+        return ResponseEntity.ok(movieService.incrementViewCount(id));
+    }
+
+    @PostMapping("/{id}/views/race-demo")
+    @Operation(
+            summary = "Run concurrent movie view increment demo",
+            description = "Runs 50+ threads to demonstrate race condition and safe synchronized mode.")
+    public ResponseEntity<ViewRaceDemoResponseDto> runViewRaceDemo(
+            @PathVariable @Positive long id,
+            @Parameter(description = "Mode: unsafe or safe", example = "unsafe")
+            @RequestParam String mode,
+            @Parameter(description = "Number of concurrent threads (minimum 50)", example = "50")
+            @Min(value = 50, message = "threads must be greater than or equal to 50")
+            @RequestParam(defaultValue = "50") int threads,
+            @Parameter(description = "Increments per thread (minimum 1)", example = "1000")
+            @Min(value = 1, message = "incrementsPerThread must be greater than or equal to 1")
+            @RequestParam(defaultValue = "1000") int incrementsPerThread) {
+        if (threads < 50) {
+            throw new IllegalArgumentException("threads must be greater than or equal to 50");
+        }
+        if (incrementsPerThread < 1) {
+            throw new IllegalArgumentException("incrementsPerThread must be greater than or equal to 1");
+        }
+        return ResponseEntity.ok(movieService.runViewRaceDemo(id, mode, threads, incrementsPerThread));
     }
 
     @PutMapping("/{id}")

@@ -165,7 +165,52 @@
 }
 ```
 
-### 7) Полное обновление фильма
+### 7) Увеличить счетчик просмотров фильма
+
+`POST /api/movies/{id}/views`
+
+- Увеличивает `viewCount` на `+1`.
+- Потокобезопасная реализация (synchronized по `movieId`).
+
+**Response (200 OK):**
+
+```json
+{
+  "movieId": 113,
+  "viewCount": 101
+}
+```
+
+### 8) Запустить race demo для счетчика просмотров
+
+`POST /api/movies/{id}/views/race-demo?mode=unsafe&threads=50&incrementsPerThread=1000`
+
+- `mode`: `unsafe` или `safe`.
+- `threads`: минимум `50`.
+- `incrementsPerThread`: минимум `1`.
+- Сценарий выполняется на реальном `movies.view_count`.
+
+**Response (200 OK):**
+
+```json
+{
+  "movieId": 113,
+  "mode": "unsafe",
+  "threads": 50,
+  "incrementsPerThread": 1000,
+  "expectedCount": 50000,
+  "actualCount": 49720,
+  "lostUpdates": 280,
+  "durationMs": 141
+}
+```
+
+Интерпретация:
+- `expectedCount` — сколько инкрементов должно было выполниться.
+- `actualCount` — сколько инкрементов реально применилось.
+- `lostUpdates` — потерянные обновления (в `safe` режиме должно быть `0`).
+
+### 9) Полное обновление фильма
 
 `PUT /api/movies/{id}`
 
@@ -191,7 +236,7 @@
 - если `studioId = null`, студия очищается;
 - если `genreIds = null`, список жанров очищается.
 
-### 8) Частичное обновление фильма
+### 10) Частичное обновление фильма
 
 `PATCH /api/movies/{id}`
 
@@ -217,13 +262,13 @@
 - `directorId`, `studioId`, `genreIds` меняются только если поле пришло с ненулевым значением;
 - очистка связей через `null` в `PATCH` не реализована.
 
-### 9) Удалить фильм
+### 11) Удалить фильм
 
 `DELETE /api/movies/{id}`
 
 **Response (204 No Content)**
 
-### 10) Загрузить постер
+### 12) Загрузить постер
 
 `POST /api/movies/{id}/poster`
 

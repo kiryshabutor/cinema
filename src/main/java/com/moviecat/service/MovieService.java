@@ -5,6 +5,8 @@ import com.moviecat.dto.MoviePatchDto;
 import com.moviecat.dto.MovieResponseDto;
 import com.moviecat.dto.MovieSearchParams;
 import com.moviecat.dto.MovieUpdateDto;
+import com.moviecat.dto.ViewCountResponseDto;
+import com.moviecat.dto.ViewRaceDemoResponseDto;
 import com.moviecat.exception.ResourceAlreadyExistsException;
 import com.moviecat.exception.ResourceNotFoundException;
 import com.moviecat.mapper.MovieMapper;
@@ -19,12 +21,21 @@ import com.moviecat.repository.StudioRepository;
 import com.moviecat.service.cache.MovieByIdCache;
 import com.moviecat.service.cache.MovieSearchCache;
 import com.moviecat.service.cache.MovieSearchKey;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
@@ -45,6 +56,11 @@ public class MovieService {
     private static final String DIRECTOR_NOT_FOUND_MSG = "Director not found";
     private static final String STUDIO_NOT_FOUND_MSG = "Studio not found";
     private static final String GENRES_NOT_FOUND_MSG = "Genres not found with ids: ";
+    private static final String INVALID_RACE_MODE_MSG = "mode must be one of: unsafe, safe";
+    private static final String RACE_DEMO_INTERRUPTED_MSG = "Race demo was interrupted";
+    private static final String RACE_DEMO_FAILED_MSG = "Race demo failed";
+    private static final String MODE_UNSAFE = "unsafe";
+    private static final String MODE_SAFE = "safe";
     private static final int DEFAULT_PAGE = 0;
     private static final int DEFAULT_SIZE = 10;
     private static final int MAX_SIZE = 100;
@@ -61,6 +77,7 @@ public class MovieService {
     private final MovieByIdCache movieByIdCache;
     private final MovieSearchCache movieSearchCache;
     private final ObjectProvider<MovieService> movieServiceProvider;
+    private final ConcurrentMap<Long, Object> movieViewLocks = new ConcurrentHashMap<>();
 
     public String uploadPoster(@NonNull Long id, MultipartFile file) {
         Movie movie = movieRepository.findById(id)
@@ -112,6 +129,59 @@ public class MovieService {
         MovieResponseDto loadedMovie = MovieMapper.toResponseDto(movie);
         movieByIdCache.put(id, loadedMovie);
         return loadedMovie;
+    }
+
+    public ViewCountResponseDto incrementViewCount(@NonNull Long movieId) {
+        long updatedViewCount = incrementViewCountSafelyInternal(movieId);
+        invalidateCaches("MovieService.incrementViewCount movieId=" + movieId);
+        return new ViewCountResponseDto(movieId, updatedViewCount);
+    }
+
+    public ViewRaceDemoResponseDto runViewRaceDemo(
+            @NonNull Long movieId,
+            String mode,
+            int threads,
+            int incrementsPerThread) {
+        String normalizedMode = normalizeRaceMode(mode);
+        long initialViewCount = getCurrentViewCount(movieId);
+        long expectedCount = (long) threads * incrementsPerThread;
+        CountDownLatch startLatch = new CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(threads);
+        List<Future<?>> futures = new ArrayList<>(threads);
+        long startedAtNanos = System.nanoTime();
+        try {
+            for (int threadIndex = 0; threadIndex < threads; threadIndex++) {
+                Future<?> future = executor.submit(() -> {
+                    awaitRaceStart(startLatch);
+                    for (int incrementIndex = 0; incrementIndex < incrementsPerThread; incrementIndex++) {
+                        if (MODE_SAFE.equals(normalizedMode)) {
+                            incrementViewCountSafelyInternal(movieId);
+                        } else {
+                            incrementViewCountUnsafelyInternal(movieId);
+                        }
+                    }
+                });
+                futures.add(future);
+            }
+            startLatch.countDown();
+            waitForRaceCompletion(futures);
+            long durationMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAtNanos);
+            long finalViewCount = getCurrentViewCount(movieId);
+            long actualCount = finalViewCount - initialViewCount;
+            long lostUpdates = Math.max(0, expectedCount - actualCount);
+            invalidateCaches("MovieService.runViewRaceDemo movieId=" + movieId + " mode=" + normalizedMode);
+            return new ViewRaceDemoResponseDto(
+                    movieId,
+                    normalizedMode,
+                    threads,
+                    incrementsPerThread,
+                    expectedCount,
+                    actualCount,
+                    lostUpdates,
+                    durationMs);
+        } finally {
+            shutdownExecutor(executor);
+        }
     }
 
     @Transactional(readOnly = true)
@@ -296,6 +366,83 @@ public class MovieService {
     private void invalidateCaches(String reason) {
         movieSearchCache.invalidate(reason);
         movieByIdCache.invalidate(reason);
+    }
+
+    private long getCurrentViewCount(Long movieId) {
+        Long safeMovieId = Objects.requireNonNull(movieId, "movieId");
+        Movie movie = movieRepository.findById(safeMovieId)
+                .orElseThrow(() -> new ResourceNotFoundException(MOVIE_NOT_FOUND_MSG + safeMovieId));
+        Long viewCount = movie.getViewCount();
+        return viewCount != null ? viewCount : 0L;
+    }
+
+    private long incrementViewCountSafelyInternal(Long movieId) {
+        Long safeMovieId = Objects.requireNonNull(movieId, "movieId");
+        Object lock = movieViewLocks.computeIfAbsent(safeMovieId, id -> new Object());
+        synchronized (lock) {
+            return incrementViewCountUnsafelyInternal(safeMovieId);
+        }
+    }
+
+    private long incrementViewCountUnsafelyInternal(Long movieId) {
+        Long safeMovieId = Objects.requireNonNull(movieId, "movieId");
+        Movie movie = movieRepository.findById(safeMovieId)
+                .orElseThrow(() -> new ResourceNotFoundException(MOVIE_NOT_FOUND_MSG + safeMovieId));
+        Long currentViewCount = movie.getViewCount();
+        long normalizedViewCount = currentViewCount != null ? currentViewCount : 0L;
+        movie.setViewCount(normalizedViewCount + 1);
+        Movie savedMovie = movieRepository.save(movie);
+        Long savedViewCount = savedMovie.getViewCount();
+        return savedViewCount != null ? savedViewCount : 0L;
+    }
+
+    private String normalizeRaceMode(String mode) {
+        if (mode == null) {
+            throw new IllegalArgumentException(INVALID_RACE_MODE_MSG);
+        }
+        String normalizedMode = mode.trim().toLowerCase(Locale.ROOT);
+        if (MODE_UNSAFE.equals(normalizedMode) || MODE_SAFE.equals(normalizedMode)) {
+            return normalizedMode;
+        }
+        throw new IllegalArgumentException(INVALID_RACE_MODE_MSG);
+    }
+
+    private void awaitRaceStart(CountDownLatch startLatch) {
+        try {
+            startLatch.await();
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException(RACE_DEMO_INTERRUPTED_MSG, exception);
+        }
+    }
+
+    private void waitForRaceCompletion(List<Future<?>> futures) {
+        for (Future<?> future : futures) {
+            try {
+                future.get();
+            } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException(RACE_DEMO_INTERRUPTED_MSG, exception);
+            } catch (ExecutionException exception) {
+                Throwable cause = exception.getCause();
+                if (cause instanceof RuntimeException runtimeException) {
+                    throw runtimeException;
+                }
+                throw new IllegalStateException(RACE_DEMO_FAILED_MSG, cause);
+            }
+        }
+    }
+
+    private void shutdownExecutor(ExecutorService executor) {
+        executor.shutdown();
+        try {
+            if (!executor.awaitTermination(10, TimeUnit.SECONDS)) {
+                executor.shutdownNow();
+            }
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            executor.shutdownNow();
+        }
     }
 
     private Set<Genre> resolveGenresByIds(Set<Long> genreIds) {

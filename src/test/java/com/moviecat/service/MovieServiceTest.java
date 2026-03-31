@@ -20,6 +20,8 @@ import com.moviecat.dto.MoviePatchDto;
 import com.moviecat.dto.MovieResponseDto;
 import com.moviecat.dto.MovieSearchParams;
 import com.moviecat.dto.MovieUpdateDto;
+import com.moviecat.dto.ViewCountResponseDto;
+import com.moviecat.dto.ViewRaceDemoResponseDto;
 import com.moviecat.exception.ResourceAlreadyExistsException;
 import com.moviecat.exception.ResourceNotFoundException;
 import com.moviecat.model.Director;
@@ -38,6 +40,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -751,6 +754,66 @@ class MovieServiceTest {
         assertEquals("year", params.getSort());
         assertEquals("desc", params.getDirection());
         assertTrue(params.isNativeQuery());
+    }
+
+    @Test
+    void incrementViewCount_shouldIncrementAndInvalidateCaches() {
+        Movie movie = movie(7L, "Interstellar");
+        movie.setViewCount(100L);
+        when(movieRepository.findById(7L)).thenReturn(Optional.of(movie));
+        when(movieRepository.save(movie)).thenReturn(movie);
+
+        ViewCountResponseDto result = movieService.incrementViewCount(7L);
+
+        assertEquals(7L, result.movieId());
+        assertEquals(101L, result.viewCount());
+        verify(movieRepository).save(movie);
+        verify(movieSearchCache).invalidate("MovieService.incrementViewCount movieId=7");
+        verify(movieByIdCache).invalidate("MovieService.incrementViewCount movieId=7");
+    }
+
+    @Test
+    void incrementViewCount_shouldThrow_whenMovieNotFound() {
+        when(movieRepository.findById(404L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> movieService.incrementViewCount(404L));
+
+        verify(movieRepository, never()).save(any(Movie.class));
+    }
+
+    @Test
+    void runViewRaceDemo_shouldThrow_whenModeIsInvalid() {
+        assertThrows(IllegalArgumentException.class, () -> movieService.runViewRaceDemo(1L, "wrong", 50, 1000));
+    }
+
+    @Test
+    void runViewRaceDemo_shouldReturnNoLostUpdatesInSafeMode() {
+        AtomicLong persistedViewCount = new AtomicLong(10L);
+
+        when(movieRepository.findById(7L)).thenAnswer(invocation -> {
+            Movie movie = movie(7L, "Interstellar");
+            movie.setViewCount(persistedViewCount.get());
+            return Optional.of(movie);
+        });
+        when(movieRepository.save(any(Movie.class))).thenAnswer(invocation -> {
+            Movie movieToSave = invocation.getArgument(0);
+            Long updatedViewCount = movieToSave.getViewCount();
+            persistedViewCount.set(updatedViewCount != null ? updatedViewCount : 0L);
+            return movieToSave;
+        });
+
+        ViewRaceDemoResponseDto result = movieService.runViewRaceDemo(7L, "safe", 50, 5);
+
+        assertEquals(7L, result.movieId());
+        assertEquals("safe", result.mode());
+        assertEquals(50, result.threads());
+        assertEquals(5, result.incrementsPerThread());
+        assertEquals(250L, result.expectedCount());
+        assertEquals(250L, result.actualCount());
+        assertEquals(0L, result.lostUpdates());
+        assertTrue(result.durationMs() >= 0);
+        verify(movieSearchCache).invalidate("MovieService.runViewRaceDemo movieId=7 mode=safe");
+        verify(movieByIdCache).invalidate("MovieService.runViewRaceDemo movieId=7 mode=safe");
     }
 
     private MovieCreateDto createDto() {

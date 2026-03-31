@@ -169,6 +169,8 @@ docker logs -f moviecat-app
 - `GET /api/movies/{id}`
 - `POST /api/movies`
 - `POST /api/movies/{movieId}/reviews/async` (асинхронный bulk отзывов)
+- `POST /api/movies/{id}/views` (увеличить счетчик просмотров)
+- `POST /api/movies/{id}/views/race-demo` (демо race condition: unsafe/safe)
 - `PUT /api/movies/{id}`
 - `PATCH /api/movies/{id}`
 - `DELETE /api/movies/{id}`
@@ -207,5 +209,13 @@ docker logs -f moviecat-app
 3. Получи `taskId` из ответа (`202 Accepted`).
 4. Опрашивай `GET /api/tasks/{taskId}` и наблюдай переходы `CREATED -> RUNNING -> COMPLETED`.
 5. Для проверки rollback запусти задачу с `fail=true` и убедись, что статус становится `FAILED`.
+
+## Демонстрация race condition для viewCount
+
+1. Выбери `movieId`.
+2. Запусти unsafe: `POST /api/movies/{movieId}/views/race-demo?mode=unsafe&threads=50&incrementsPerThread=1000`.
+3. Зафиксируй `lostUpdates` (обычно `> 0`).
+4. Запусти safe: `POST /api/movies/{movieId}/views/race-demo?mode=safe&threads=50&incrementsPerThread=1000`.
+5. Проверь, что `lostUpdates = 0`.
 
 Подробные примеры запросов/ответов: [api_endpoints.md](api_endpoints.md).
