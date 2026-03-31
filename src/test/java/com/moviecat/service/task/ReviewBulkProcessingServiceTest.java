@@ -1,6 +1,7 @@
 package com.moviecat.service.task;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mockingDetails;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -87,12 +88,69 @@ class ReviewBulkProcessingServiceTest {
     @Test
     void createBulkTransactional_shouldThrow_whenMovieNotFound() {
         when(movieRepository.findById(404L)).thenReturn(Optional.empty());
+        Runnable noOp = () -> {
+        };
 
         assertThrows(
                 ResourceNotFoundException.class,
-                () -> reviewBulkProcessingService.createBulkTransactional(404L, List.of(), false, 0, () -> {
-                }));
+                () -> reviewBulkProcessingService.createBulkTransactional(404L, List.of(), false, 0, noOp));
 
         verifyNoInteractions(reviewRepository);
+    }
+
+    @Test
+    void createBulkTransactional_shouldHandleNullItemsAndCallback() {
+        Movie movie = new Movie();
+        movie.setId(7L);
+        when(movieRepository.findById(7L)).thenReturn(Optional.of(movie));
+
+        assertDoesNotThrow(() -> reviewBulkProcessingService.createBulkTransactional(7L, null, false, 0, null));
+
+        verifyNoInteractions(reviewRepository);
+    }
+
+    @Test
+    void createBulkTransactional_shouldSleepAndUseNoOpCallback_whenDelayPositive() {
+        Movie movie = new Movie();
+        movie.setId(7L);
+        when(movieRepository.findById(7L)).thenReturn(Optional.of(movie));
+        List<ReviewCreateItemDto> items = List.of(new ReviewCreateItemDto("alice", 9, "Great"));
+
+        assertDoesNotThrow(() -> reviewBulkProcessingService.createBulkTransactional(7L, items, false, 1, null));
+
+        long saveCalls = mockingDetails(reviewRepository).getInvocations().stream()
+                .filter(invocation -> invocation.getMethod().getName().equals("save"))
+                .count();
+        assertEquals(1, saveCalls);
+    }
+
+    @Test
+    void createBulkTransactional_shouldThrow_whenMovieIdIsNull() {
+        NullPointerException exception = assertThrows(
+                NullPointerException.class,
+                () -> reviewBulkProcessingService.createBulkTransactional(null, List.of(), false, 0, null));
+
+        assertEquals("Movie ID is required", exception.getMessage());
+        verifyNoInteractions(movieRepository, reviewRepository);
+    }
+
+    @Test
+    void createBulkTransactional_shouldThrow_whenInterruptedDuringItemDelay() {
+        Movie movie = new Movie();
+        movie.setId(7L);
+        when(movieRepository.findById(7L)).thenReturn(Optional.of(movie));
+        List<ReviewCreateItemDto> items = List.of(new ReviewCreateItemDto("alice", 9, "Great"));
+
+        Thread.currentThread().interrupt();
+        try {
+            IllegalStateException exception = assertThrows(
+                    IllegalStateException.class,
+                    () -> reviewBulkProcessingService.createBulkTransactional(7L, items, false, 1, null));
+
+            assertEquals("Bulk processing was interrupted", exception.getMessage());
+            verifyNoInteractions(reviewRepository);
+        } finally {
+            Thread.interrupted();
+        }
     }
 }

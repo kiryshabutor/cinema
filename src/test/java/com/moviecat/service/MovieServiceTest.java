@@ -782,8 +782,128 @@ class MovieServiceTest {
     }
 
     @Test
+    void incrementViewCount_shouldTreatNullCurrentViewCountAsZero() {
+        Movie movie = movie(8L, "Tenet");
+        movie.setViewCount(null);
+        when(movieRepository.findById(8L)).thenReturn(Optional.of(movie));
+        when(movieRepository.save(movie)).thenReturn(movie);
+
+        ViewCountResponseDto result = movieService.incrementViewCount(8L);
+
+        assertEquals(8L, result.movieId());
+        assertEquals(1L, result.viewCount());
+    }
+
+    @Test
+    void incrementViewCount_shouldReturnZero_whenSavedViewCountIsNull() {
+        Movie movie = movie(9L, "Dune");
+        movie.setViewCount(5L);
+        Movie savedMovie = movie(9L, "Dune");
+        savedMovie.setViewCount(null);
+        when(movieRepository.findById(9L)).thenReturn(Optional.of(movie));
+        when(movieRepository.save(movie)).thenReturn(savedMovie);
+
+        ViewCountResponseDto result = movieService.incrementViewCount(9L);
+
+        assertEquals(9L, result.movieId());
+        assertEquals(0L, result.viewCount());
+    }
+
+    @Test
     void runViewRaceDemo_shouldThrow_whenModeIsInvalid() {
         assertThrows(IllegalArgumentException.class, () -> movieService.runViewRaceDemo(1L, "wrong", 50, 1000));
+    }
+
+    @Test
+    void runViewRaceDemo_shouldThrow_whenModeIsNull() {
+        assertThrows(IllegalArgumentException.class, () -> movieService.runViewRaceDemo(1L, null, 50, 1000));
+    }
+
+    @Test
+    void runViewRaceDemo_shouldThrow_whenMovieIsMissingBeforeStart() {
+        when(movieRepository.findById(404L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> movieService.runViewRaceDemo(404L, "safe", 50, 1));
+    }
+
+    @Test
+    void runViewRaceDemo_shouldNormalizeMode_whenSafeContainsSpacesAndUppercase() {
+        AtomicLong persistedViewCount = new AtomicLong(0L);
+
+        when(movieRepository.findById(11L)).thenAnswer(invocation -> {
+            Movie movie = movie(11L, "Interstellar");
+            movie.setViewCount(persistedViewCount.get());
+            return Optional.of(movie);
+        });
+        when(movieRepository.save(any(Movie.class))).thenAnswer(invocation -> {
+            Movie movieToSave = invocation.getArgument(0);
+            Long updatedViewCount = movieToSave.getViewCount();
+            persistedViewCount.set(updatedViewCount != null ? updatedViewCount : 0L);
+            return movieToSave;
+        });
+
+        ViewRaceDemoResponseDto result = movieService.runViewRaceDemo(11L, " SAFE ", 50, 1);
+
+        assertEquals("safe", result.mode());
+        assertEquals(50L, result.expectedCount());
+        assertEquals(0L, result.lostUpdates());
+    }
+
+    @Test
+    void runViewRaceDemo_shouldReturnResponseForUnsafeMode() {
+        AtomicLong persistedViewCount = new AtomicLong(0L);
+
+        when(movieRepository.findById(12L)).thenAnswer(invocation -> {
+            Movie movie = movie(12L, "Interstellar");
+            movie.setViewCount(persistedViewCount.get());
+            return Optional.of(movie);
+        });
+        when(movieRepository.save(any(Movie.class))).thenAnswer(invocation -> {
+            Movie movieToSave = invocation.getArgument(0);
+            Long updatedViewCount = movieToSave.getViewCount();
+            persistedViewCount.set(updatedViewCount != null ? updatedViewCount : 0L);
+            return movieToSave;
+        });
+
+        ViewRaceDemoResponseDto result = movieService.runViewRaceDemo(12L, "unsafe", 50, 1);
+
+        assertEquals("unsafe", result.mode());
+        assertEquals(50L, result.expectedCount());
+        assertTrue(result.actualCount() <= result.expectedCount());
+    }
+
+    @Test
+    void runViewRaceDemo_shouldRethrowRuntimeExceptionFromWorker() {
+        AtomicLong invocationCount = new AtomicLong(0L);
+        when(movieRepository.findById(13L)).thenAnswer(invocation -> {
+            if (invocationCount.getAndIncrement() == 0L) {
+                Movie movie = movie(13L, "Interstellar");
+                movie.setViewCount(0L);
+                return Optional.of(movie);
+            }
+            return Optional.empty();
+        });
+
+        assertThrows(ResourceNotFoundException.class, () -> movieService.runViewRaceDemo(13L, "safe", 50, 1));
+    }
+
+    @Test
+    void runViewRaceDemo_shouldWrapNonRuntimeThrowableFromWorker() {
+        AtomicLong invocationCount = new AtomicLong(0L);
+        when(movieRepository.findById(14L)).thenAnswer(invocation -> {
+            if (invocationCount.getAndIncrement() == 0L) {
+                Movie movie = movie(14L, "Interstellar");
+                movie.setViewCount(0L);
+                return Optional.of(movie);
+            }
+            throw new AssertionError("boom");
+        });
+
+        IllegalStateException exception =
+                assertThrows(IllegalStateException.class, () -> movieService.runViewRaceDemo(14L, "safe", 50, 1));
+
+        assertEquals("Race demo failed", exception.getMessage());
+        assertTrue(exception.getCause() instanceof AssertionError);
     }
 
     @Test

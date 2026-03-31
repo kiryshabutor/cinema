@@ -74,4 +74,27 @@ class ReviewTaskRegistryServiceTest {
 
         assertThrows(ResourceNotFoundException.class, () -> reviewTaskRegistryService.getTaskStatus(missingTaskId));
     }
+
+    @Test
+    void createTask_shouldNormalizeNegativeTotalCountToZero() {
+        Long taskId = reviewTaskRegistryService.createTask(-7);
+
+        TaskStatusResponseDto status = reviewTaskRegistryService.getTaskStatus(taskId);
+
+        assertEquals(0, status.totalCount());
+    }
+
+    @Test
+    void markRunning_shouldBeIdempotent_whenCalledMultipleTimes() {
+        Long taskId = reviewTaskRegistryService.createTask(1);
+
+        reviewTaskRegistryService.markRunning(taskId);
+        TaskStatusResponseDto firstStatus = reviewTaskRegistryService.getTaskStatus(taskId);
+
+        reviewTaskRegistryService.markRunning(taskId);
+        TaskStatusResponseDto secondStatus = reviewTaskRegistryService.getTaskStatus(taskId);
+
+        assertEquals(TaskExecutionStatus.RUNNING, secondStatus.status());
+        assertEquals(firstStatus.startedAt(), secondStatus.startedAt());
+    }
 }

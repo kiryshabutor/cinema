@@ -53,6 +53,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class MovieService {
 
     private static final String MOVIE_NOT_FOUND_MSG = "Movie not found with id: ";
+    private static final String MOVIE_ID_REQUIRED_MSG = "movieId";
     private static final String DIRECTOR_NOT_FOUND_MSG = "Director not found";
     private static final String STUDIO_NOT_FOUND_MSG = "Studio not found";
     private static final String GENRES_NOT_FOUND_MSG = "Genres not found with ids: ";
@@ -369,7 +370,7 @@ public class MovieService {
     }
 
     private long getCurrentViewCount(Long movieId) {
-        Long safeMovieId = Objects.requireNonNull(movieId, "movieId");
+        Long safeMovieId = Objects.requireNonNull(movieId, MOVIE_ID_REQUIRED_MSG);
         Movie movie = movieRepository.findById(safeMovieId)
                 .orElseThrow(() -> new ResourceNotFoundException(MOVIE_NOT_FOUND_MSG + safeMovieId));
         Long viewCount = movie.getViewCount();
@@ -377,7 +378,7 @@ public class MovieService {
     }
 
     private long incrementViewCountSafelyInternal(Long movieId) {
-        Long safeMovieId = Objects.requireNonNull(movieId, "movieId");
+        Long safeMovieId = Objects.requireNonNull(movieId, MOVIE_ID_REQUIRED_MSG);
         Object lock = movieViewLocks.computeIfAbsent(safeMovieId, id -> new Object());
         synchronized (lock) {
             return incrementViewCountUnsafelyInternal(safeMovieId);
@@ -385,7 +386,7 @@ public class MovieService {
     }
 
     private long incrementViewCountUnsafelyInternal(Long movieId) {
-        Long safeMovieId = Objects.requireNonNull(movieId, "movieId");
+        Long safeMovieId = Objects.requireNonNull(movieId, MOVIE_ID_REQUIRED_MSG);
         Movie movie = movieRepository.findById(safeMovieId)
                 .orElseThrow(() -> new ResourceNotFoundException(MOVIE_NOT_FOUND_MSG + safeMovieId));
         Long currentViewCount = movie.getViewCount();
