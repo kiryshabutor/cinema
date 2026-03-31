@@ -959,6 +959,7 @@ class MovieServiceTest {
     @Test
     void waitForRaceCompletion_shouldThrow_whenFutureGetIsInterrupted() throws Exception {
         Future<?> interruptedFuture = org.mockito.Mockito.mock(Future.class);
+        List<Future<?>> futures = List.of(interruptedFuture);
         when(interruptedFuture.get()).thenThrow(new InterruptedException("interrupted"));
 
         try {
@@ -967,7 +968,7 @@ class MovieServiceTest {
                     () -> ReflectionTestUtils.invokeMethod(
                             movieService,
                             "waitForRaceCompletion",
-                            List.of(interruptedFuture)));
+                            futures));
 
             assertEquals("Race demo was interrupted", exception.getMessage());
         } finally {
