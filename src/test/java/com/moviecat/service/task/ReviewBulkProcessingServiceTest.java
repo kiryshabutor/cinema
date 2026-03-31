@@ -88,12 +88,13 @@ class ReviewBulkProcessingServiceTest {
     @Test
     void createBulkTransactional_shouldThrow_whenMovieNotFound() {
         when(movieRepository.findById(404L)).thenReturn(Optional.empty());
+        List<ReviewCreateItemDto> emptyItems = List.of();
         Runnable noOp = () -> {
         };
 
         assertThrows(
                 ResourceNotFoundException.class,
-                () -> reviewBulkProcessingService.createBulkTransactional(404L, List.of(), false, 0, noOp));
+                () -> reviewBulkProcessingService.createBulkTransactional(404L, emptyItems, false, 0, noOp));
 
         verifyNoInteractions(reviewRepository);
     }
@@ -126,9 +127,10 @@ class ReviewBulkProcessingServiceTest {
 
     @Test
     void createBulkTransactional_shouldThrow_whenMovieIdIsNull() {
+        List<ReviewCreateItemDto> emptyItems = List.of();
         NullPointerException exception = assertThrows(
                 NullPointerException.class,
-                () -> reviewBulkProcessingService.createBulkTransactional(null, List.of(), false, 0, null));
+                () -> reviewBulkProcessingService.createBulkTransactional(null, emptyItems, false, 0, null));
 
         assertEquals("Movie ID is required", exception.getMessage());
         verifyNoInteractions(movieRepository, reviewRepository);

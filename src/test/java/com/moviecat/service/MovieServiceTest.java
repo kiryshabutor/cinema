@@ -40,6 +40,11 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -51,6 +56,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 @ExtendWith(MockitoExtension.class)
@@ -904,6 +910,93 @@ class MovieServiceTest {
 
         assertEquals("Race demo failed", exception.getMessage());
         assertTrue(exception.getCause() instanceof AssertionError);
+    }
+
+    @Test
+    void runViewRaceDemo_shouldTreatNullInitialViewCountAsZero() {
+        AtomicLong persistedViewCount = new AtomicLong(0L);
+        AtomicBoolean firstRead = new AtomicBoolean(true);
+
+        when(movieRepository.findById(15L)).thenAnswer(invocation -> {
+            Movie movie = movie(15L, "Interstellar");
+            if (firstRead.getAndSet(false)) {
+                movie.setViewCount(null);
+            } else {
+                movie.setViewCount(persistedViewCount.get());
+            }
+            return Optional.of(movie);
+        });
+        when(movieRepository.save(any(Movie.class))).thenAnswer(invocation -> {
+            Movie movieToSave = invocation.getArgument(0);
+            Long updatedViewCount = movieToSave.getViewCount();
+            persistedViewCount.set(updatedViewCount != null ? updatedViewCount : 0L);
+            return movieToSave;
+        });
+
+        ViewRaceDemoResponseDto result = movieService.runViewRaceDemo(15L, "safe", 50, 1);
+
+        assertEquals(50L, result.expectedCount());
+        assertEquals(50L, result.actualCount());
+        assertEquals(0L, result.lostUpdates());
+    }
+
+    @Test
+    void awaitRaceStart_shouldThrow_whenCurrentThreadInterrupted() {
+        CountDownLatch startLatch = new CountDownLatch(1);
+
+        Thread.currentThread().interrupt();
+        try {
+            IllegalStateException exception = assertThrows(
+                    IllegalStateException.class,
+                    () -> ReflectionTestUtils.invokeMethod(movieService, "awaitRaceStart", startLatch));
+
+            assertEquals("Race demo was interrupted", exception.getMessage());
+        } finally {
+            Thread.interrupted();
+        }
+    }
+
+    @Test
+    void waitForRaceCompletion_shouldThrow_whenFutureGetIsInterrupted() throws Exception {
+        Future<?> interruptedFuture = org.mockito.Mockito.mock(Future.class);
+        when(interruptedFuture.get()).thenThrow(new InterruptedException("interrupted"));
+
+        try {
+            IllegalStateException exception = assertThrows(
+                    IllegalStateException.class,
+                    () -> ReflectionTestUtils.invokeMethod(
+                            movieService,
+                            "waitForRaceCompletion",
+                            List.of(interruptedFuture)));
+
+            assertEquals("Race demo was interrupted", exception.getMessage());
+        } finally {
+            Thread.interrupted();
+        }
+    }
+
+    @Test
+    void shutdownExecutor_shouldForceShutdown_whenAwaitTerminationReturnsFalse() throws Exception {
+        ExecutorService executor = org.mockito.Mockito.mock(ExecutorService.class);
+        when(executor.awaitTermination(10, TimeUnit.SECONDS)).thenReturn(false);
+
+        ReflectionTestUtils.invokeMethod(movieService, "shutdownExecutor", executor);
+
+        verify(executor).shutdown();
+        verify(executor).shutdownNow();
+    }
+
+    @Test
+    void shutdownExecutor_shouldForceShutdown_whenAwaitTerminationIsInterrupted() throws Exception {
+        ExecutorService executor = org.mockito.Mockito.mock(ExecutorService.class);
+        when(executor.awaitTermination(10, TimeUnit.SECONDS)).thenThrow(new InterruptedException("stop"));
+
+        ReflectionTestUtils.invokeMethod(movieService, "shutdownExecutor", executor);
+
+        verify(executor).shutdown();
+        verify(executor).shutdownNow();
+        assertTrue(Thread.currentThread().isInterrupted());
+        Thread.interrupted();
     }
 
     @Test
