@@ -6,9 +6,11 @@ import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 public interface MovieRepository extends JpaRepository<Movie, Long> {
@@ -168,6 +170,20 @@ public interface MovieRepository extends JpaRepository<Movie, Long> {
             WHERE m.id = :id
             """)
     Optional<Movie> findByIdWithDetails(@Param("id") Long id);
+
+    @Query("SELECT COALESCE(m.viewCount, 0) FROM Movie m WHERE m.id = :movieId")
+    Optional<Long> findPersistedViewCountById(@Param("movieId") Long movieId);
+
+    @Modifying
+    @Transactional
+    @Query(
+            value = """
+            UPDATE movies
+            SET view_count = COALESCE(view_count, 0) + :delta
+            WHERE id = :movieId
+            """,
+            nativeQuery = true)
+    int incrementViewCountByDelta(@Param("movieId") Long movieId, @Param("delta") long delta);
 
     interface MovieSearchRowProjection {
         Long getId();

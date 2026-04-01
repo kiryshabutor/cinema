@@ -177,7 +177,7 @@ public class MovieController {
     @PostMapping("/{id}/views/race-demo")
     @Operation(
             summary = "Run concurrent movie view increment demo",
-            description = "Runs 50+ threads to demonstrate race condition and safe synchronized mode.")
+            description = "Runs 50+ threads to demonstrate in-memory race condition and safe atomic mode.")
     public ResponseEntity<ViewRaceDemoResponseDto> runViewRaceDemo(
             @PathVariable @Positive long id,
             @Parameter(description = "Mode: unsafe or safe", example = "unsafe")

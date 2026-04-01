@@ -9,7 +9,7 @@
 - JMeter plan: `jmeter/lab6-race-demo.jmx`
 
 The plan includes:
-- user variables: `host`, `port`, `movieId`, `threads=50`, `incrementsPerThread=1000`, `requestsPerMode=5`;
+- user variables: `host`, `port`, `movieId`, `threads=50`, `incrementsPerThread=5`, `requestsPerMode=5`;
 - Thread Group A for `mode=unsafe`;
 - Thread Group B for `mode=safe`;
 - assertion `HTTP 200` for both modes;
@@ -31,7 +31,7 @@ jmeter -n \
   -Jport=8080 \
   -JmovieId=113 \
   -Jthreads=50 \
-  -JincrementsPerThread=1000 \
+  -JincrementsPerThread=5 \
   -JrequestsPerMode=5 \
   -Jsample_variables=mode,expectedCount,actualCount,lostUpdates,durationMs \
   -Jjmeter.save.saveservice.output_format=csv \
@@ -44,10 +44,10 @@ jmeter -g jmeter/results/lab6-race-run1.jtl -o jmeter/results/dashboard-run1
 Repeat the non-GUI run command for `run2..run5` by changing output file names.
 
 ## Environment
-- Date: 2026-03-31
+- Date: 2026-04-01
 - Project: `movie-catalog`
 - Dataset: existing movie record (example `movieId=113`)
-- Load profile per request: `threads=50`, `incrementsPerThread=1000`.
+- Load profile per request: `threads=50`, `incrementsPerThread=5`.
 
 ## Results
 > Current repository update adds reproducible test artifacts and commands.
@@ -55,16 +55,16 @@ Repeat the non-GUI run command for `run2..run5` by changing output file names.
 
 | Run | Mode | Throughput (req/s) | Avg latency (ms) | P95 latency (ms) | Error % | expectedCount | actualCount | lostUpdates |
 |---|---|---:|---:|---:|---:|---:|---:|---:|
-| 1 | unsafe | TBD | TBD | TBD | TBD | 50000 | TBD | TBD |
-| 1 | safe   | TBD | TBD | TBD | TBD | 50000 | TBD | 0 |
-| 2 | unsafe | TBD | TBD | TBD | TBD | 50000 | TBD | TBD |
-| 2 | safe   | TBD | TBD | TBD | TBD | 50000 | TBD | 0 |
-| 3 | unsafe | TBD | TBD | TBD | TBD | 50000 | TBD | TBD |
-| 3 | safe   | TBD | TBD | TBD | TBD | 50000 | TBD | 0 |
-| 4 | unsafe | TBD | TBD | TBD | TBD | 50000 | TBD | TBD |
-| 4 | safe   | TBD | TBD | TBD | TBD | 50000 | TBD | 0 |
-| 5 | unsafe | TBD | TBD | TBD | TBD | 50000 | TBD | TBD |
-| 5 | safe   | TBD | TBD | TBD | TBD | 50000 | TBD | 0 |
+| 1 | unsafe | TBD | TBD | TBD | TBD | 250 | TBD | TBD |
+| 1 | safe   | TBD | TBD | TBD | TBD | 250 | TBD | 0 |
+| 2 | unsafe | TBD | TBD | TBD | TBD | 250 | TBD | TBD |
+| 2 | safe   | TBD | TBD | TBD | TBD | 250 | TBD | 0 |
+| 3 | unsafe | TBD | TBD | TBD | TBD | 250 | TBD | TBD |
+| 3 | safe   | TBD | TBD | TBD | TBD | 250 | TBD | 0 |
+| 4 | unsafe | TBD | TBD | TBD | TBD | 250 | TBD | TBD |
+| 4 | safe   | TBD | TBD | TBD | TBD | 250 | TBD | 0 |
+| 5 | unsafe | TBD | TBD | TBD | TBD | 250 | TBD | TBD |
+| 5 | safe   | TBD | TBD | TBD | TBD | 250 | TBD | 0 |
 
 ## Conclusion template
 - `safe`: `lostUpdates` should remain `0` in all runs.

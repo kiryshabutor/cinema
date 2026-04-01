@@ -13,6 +13,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.moviecat.dto.MovieCreateDto;
@@ -40,12 +41,10 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -88,6 +87,9 @@ class MovieServiceTest {
     private ObjectProvider<MovieService> movieServiceProvider;
 
     @Mock
+    private MovieViewWriteBehindService movieViewWriteBehindService;
+
+    @Mock
     private MultipartFile multipartFile;
 
     private MovieService movieService;
@@ -102,7 +104,8 @@ class MovieServiceTest {
                 fileStorageService,
                 movieByIdCache,
                 movieSearchCache,
-                movieServiceProvider);
+                movieServiceProvider,
+                movieViewWriteBehindService);
     }
 
     @Test
@@ -128,6 +131,19 @@ class MovieServiceTest {
         assertEquals(1L, result.getId());
         assertEquals("Interstellar", result.getTitle());
         verify(movieByIdCache).put(eq(1L), any(MovieResponseDto.class));
+    }
+
+    @Test
+    void getById_shouldIncludePendingViewDelta_whenCacheMiss() {
+        when(movieByIdCache.get(21L)).thenReturn(null);
+        Movie movie = movie(21L, "Tenet");
+        movie.setViewCount(100L);
+        when(movieRepository.findByIdWithDetails(21L)).thenReturn(Optional.of(movie));
+        when(movieViewWriteBehindService.getPendingDelta(21L)).thenReturn(7L);
+
+        MovieResponseDto result = movieService.getById(21L);
+
+        assertEquals(107L, result.getViewCount());
     }
 
     @Test
@@ -183,6 +199,7 @@ class MovieServiceTest {
         when(movieSearchCache.get(any(MovieSearchKey.class))).thenReturn(null);
 
         MovieRepository.MovieSearchRowProjection row = projection(7L, "Interstellar");
+        when(movieViewWriteBehindService.getPendingDelta(7L)).thenReturn(5L);
         Page<MovieRepository.MovieSearchRowProjection> repoPage = new PageImpl<>(nn(List.of(row)));
         when(movieRepository.searchAdvancedJpql(anyString(), anyString(), anyString(), anyString(), any(Pageable.class)))
                 .thenReturn(repoPage);
@@ -191,6 +208,7 @@ class MovieServiceTest {
 
         assertEquals(1, result.getContent().size());
         assertEquals("Interstellar", result.getContent().get(0).getTitle());
+        assertEquals(105L, result.getContent().get(0).getViewCount());
 
         ArgumentCaptor<MovieSearchKey> keyCaptor = ArgumentCaptor.forClass(MovieSearchKey.class);
         verify(movieSearchCache).get(keyCaptor.capture());
@@ -763,56 +781,28 @@ class MovieServiceTest {
     }
 
     @Test
-    void incrementViewCount_shouldIncrementAndInvalidateCaches() {
-        Movie movie = movie(7L, "Interstellar");
-        movie.setViewCount(100L);
-        when(movieRepository.findById(7L)).thenReturn(Optional.of(movie));
-        when(movieRepository.save(movie)).thenReturn(movie);
+    void incrementViewCount_shouldUseWriteBehindAndInvalidateCaches() {
+        when(movieViewWriteBehindService.incrementPendingAndGetCurrentViewCount(7L)).thenReturn(101L);
 
         ViewCountResponseDto result = movieService.incrementViewCount(7L);
 
         assertEquals(7L, result.movieId());
         assertEquals(101L, result.viewCount());
-        verify(movieRepository).save(movie);
+        verify(movieViewWriteBehindService).incrementPendingAndGetCurrentViewCount(7L);
         verify(movieSearchCache).invalidate("MovieService.incrementViewCount movieId=7");
         verify(movieByIdCache).invalidate("MovieService.incrementViewCount movieId=7");
+        verifyNoInteractions(movieRepository);
     }
 
     @Test
     void incrementViewCount_shouldThrow_whenMovieNotFound() {
-        when(movieRepository.findById(404L)).thenReturn(Optional.empty());
+        when(movieViewWriteBehindService.incrementPendingAndGetCurrentViewCount(404L))
+                .thenThrow(new ResourceNotFoundException("Movie not found with id: 404"));
 
         assertThrows(ResourceNotFoundException.class, () -> movieService.incrementViewCount(404L));
 
-        verify(movieRepository, never()).save(any(Movie.class));
-    }
-
-    @Test
-    void incrementViewCount_shouldTreatNullCurrentViewCountAsZero() {
-        Movie movie = movie(8L, "Tenet");
-        movie.setViewCount(null);
-        when(movieRepository.findById(8L)).thenReturn(Optional.of(movie));
-        when(movieRepository.save(movie)).thenReturn(movie);
-
-        ViewCountResponseDto result = movieService.incrementViewCount(8L);
-
-        assertEquals(8L, result.movieId());
-        assertEquals(1L, result.viewCount());
-    }
-
-    @Test
-    void incrementViewCount_shouldReturnZero_whenSavedViewCountIsNull() {
-        Movie movie = movie(9L, "Dune");
-        movie.setViewCount(5L);
-        Movie savedMovie = movie(9L, "Dune");
-        savedMovie.setViewCount(null);
-        when(movieRepository.findById(9L)).thenReturn(Optional.of(movie));
-        when(movieRepository.save(movie)).thenReturn(savedMovie);
-
-        ViewCountResponseDto result = movieService.incrementViewCount(9L);
-
-        assertEquals(9L, result.movieId());
-        assertEquals(0L, result.viewCount());
+        verify(movieSearchCache, never()).invalidate(anyString());
+        verify(movieByIdCache, never()).invalidate(anyString());
     }
 
     @Test
@@ -827,117 +817,47 @@ class MovieServiceTest {
 
     @Test
     void runViewRaceDemo_shouldThrow_whenMovieIsMissingBeforeStart() {
-        when(movieRepository.findById(404L)).thenReturn(Optional.empty());
+        ResourceNotFoundException missingMovieException = new ResourceNotFoundException("Movie not found with id: 404");
+        org.mockito.Mockito.doThrow(missingMovieException)
+                .when(movieViewWriteBehindService)
+                .ensureMovieExists(404L);
 
         assertThrows(ResourceNotFoundException.class, () -> movieService.runViewRaceDemo(404L, "safe", 50, 1));
+        verify(movieViewWriteBehindService, never()).addPendingDeltaAndGetCurrentViewCount(eq(404L), anyLong());
     }
 
     @Test
     void runViewRaceDemo_shouldNormalizeMode_whenSafeContainsSpacesAndUppercase() {
-        AtomicLong persistedViewCount = new AtomicLong(0L);
-
-        when(movieRepository.findById(11L)).thenAnswer(invocation -> {
-            Movie movie = movie(11L, "Interstellar");
-            movie.setViewCount(persistedViewCount.get());
-            return Optional.of(movie);
-        });
-        when(movieRepository.save(any(Movie.class))).thenAnswer(invocation -> {
-            Movie movieToSave = invocation.getArgument(0);
-            Long updatedViewCount = movieToSave.getViewCount();
-            persistedViewCount.set(updatedViewCount != null ? updatedViewCount : 0L);
-            return movieToSave;
-        });
-
         ViewRaceDemoResponseDto result = movieService.runViewRaceDemo(11L, " SAFE ", 50, 1);
 
         assertEquals("safe", result.mode());
         assertEquals(50L, result.expectedCount());
+        assertEquals(50L, result.actualCount());
         assertEquals(0L, result.lostUpdates());
+        verify(movieViewWriteBehindService).ensureMovieExists(11L);
+        verify(movieViewWriteBehindService).addPendingDeltaAndGetCurrentViewCount(11L, 50L);
     }
 
     @Test
     void runViewRaceDemo_shouldReturnResponseForUnsafeMode() {
-        AtomicLong persistedViewCount = new AtomicLong(0L);
-
-        when(movieRepository.findById(12L)).thenAnswer(invocation -> {
-            Movie movie = movie(12L, "Interstellar");
-            movie.setViewCount(persistedViewCount.get());
-            return Optional.of(movie);
-        });
-        when(movieRepository.save(any(Movie.class))).thenAnswer(invocation -> {
-            Movie movieToSave = invocation.getArgument(0);
-            Long updatedViewCount = movieToSave.getViewCount();
-            persistedViewCount.set(updatedViewCount != null ? updatedViewCount : 0L);
-            return movieToSave;
-        });
-
-        ViewRaceDemoResponseDto result = movieService.runViewRaceDemo(12L, "unsafe", 50, 1);
+        ViewRaceDemoResponseDto result = movieService.runViewRaceDemo(12L, "unsafe", 50, 5);
 
         assertEquals("unsafe", result.mode());
-        assertEquals(50L, result.expectedCount());
+        assertEquals(250L, result.expectedCount());
         assertTrue(result.actualCount() <= result.expectedCount());
+        assertEquals(result.expectedCount() - result.actualCount(), result.lostUpdates());
+        verify(movieViewWriteBehindService).addPendingDeltaAndGetCurrentViewCount(12L, result.actualCount());
     }
 
     @Test
-    void runViewRaceDemo_shouldRethrowRuntimeExceptionFromWorker() {
-        AtomicLong invocationCount = new AtomicLong(0L);
-        when(movieRepository.findById(13L)).thenAnswer(invocation -> {
-            if (invocationCount.getAndIncrement() == 0L) {
-                Movie movie = movie(13L, "Interstellar");
-                movie.setViewCount(0L);
-                return Optional.of(movie);
-            }
-            return Optional.empty();
-        });
-
-        assertThrows(ResourceNotFoundException.class, () -> movieService.runViewRaceDemo(13L, "safe", 50, 1));
-    }
-
-    @Test
-    void runViewRaceDemo_shouldWrapNonRuntimeThrowableFromWorker() {
-        AtomicLong invocationCount = new AtomicLong(0L);
-        when(movieRepository.findById(14L)).thenAnswer(invocation -> {
-            if (invocationCount.getAndIncrement() == 0L) {
-                Movie movie = movie(14L, "Interstellar");
-                movie.setViewCount(0L);
-                return Optional.of(movie);
-            }
-            throw new AssertionError("boom");
-        });
+    void runViewRaceDemo_shouldPropagateException_whenPendingUpdateFails() {
+        when(movieViewWriteBehindService.addPendingDeltaAndGetCurrentViewCount(13L, 250L))
+                .thenThrow(new IllegalStateException("flush failed"));
 
         IllegalStateException exception =
-                assertThrows(IllegalStateException.class, () -> movieService.runViewRaceDemo(14L, "safe", 50, 1));
+                assertThrows(IllegalStateException.class, () -> movieService.runViewRaceDemo(13L, "safe", 50, 5));
 
-        assertEquals("Race demo failed", exception.getMessage());
-        assertTrue(exception.getCause() instanceof AssertionError);
-    }
-
-    @Test
-    void runViewRaceDemo_shouldTreatNullInitialViewCountAsZero() {
-        AtomicLong persistedViewCount = new AtomicLong(0L);
-        AtomicBoolean firstRead = new AtomicBoolean(true);
-
-        when(movieRepository.findById(15L)).thenAnswer(invocation -> {
-            Movie movie = movie(15L, "Interstellar");
-            if (firstRead.getAndSet(false)) {
-                movie.setViewCount(null);
-            } else {
-                movie.setViewCount(persistedViewCount.get());
-            }
-            return Optional.of(movie);
-        });
-        when(movieRepository.save(any(Movie.class))).thenAnswer(invocation -> {
-            Movie movieToSave = invocation.getArgument(0);
-            Long updatedViewCount = movieToSave.getViewCount();
-            persistedViewCount.set(updatedViewCount != null ? updatedViewCount : 0L);
-            return movieToSave;
-        });
-
-        ViewRaceDemoResponseDto result = movieService.runViewRaceDemo(15L, "safe", 50, 1);
-
-        assertEquals(50L, result.expectedCount());
-        assertEquals(50L, result.actualCount());
-        assertEquals(0L, result.lostUpdates());
+        assertEquals("flush failed", exception.getMessage());
     }
 
     @Test
@@ -1002,20 +922,6 @@ class MovieServiceTest {
 
     @Test
     void runViewRaceDemo_shouldReturnNoLostUpdatesInSafeMode() {
-        AtomicLong persistedViewCount = new AtomicLong(10L);
-
-        when(movieRepository.findById(7L)).thenAnswer(invocation -> {
-            Movie movie = movie(7L, "Interstellar");
-            movie.setViewCount(persistedViewCount.get());
-            return Optional.of(movie);
-        });
-        when(movieRepository.save(any(Movie.class))).thenAnswer(invocation -> {
-            Movie movieToSave = invocation.getArgument(0);
-            Long updatedViewCount = movieToSave.getViewCount();
-            persistedViewCount.set(updatedViewCount != null ? updatedViewCount : 0L);
-            return movieToSave;
-        });
-
         ViewRaceDemoResponseDto result = movieService.runViewRaceDemo(7L, "safe", 50, 5);
 
         assertEquals(7L, result.movieId());
@@ -1026,6 +932,8 @@ class MovieServiceTest {
         assertEquals(250L, result.actualCount());
         assertEquals(0L, result.lostUpdates());
         assertTrue(result.durationMs() >= 0);
+        verify(movieViewWriteBehindService).ensureMovieExists(7L);
+        verify(movieViewWriteBehindService).addPendingDeltaAndGetCurrentViewCount(7L, 250L);
         verify(movieSearchCache).invalidate("MovieService.runViewRaceDemo movieId=7 mode=safe");
         verify(movieByIdCache).invalidate("MovieService.runViewRaceDemo movieId=7 mode=safe");
     }

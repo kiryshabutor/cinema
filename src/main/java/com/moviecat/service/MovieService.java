@@ -28,14 +28,13 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
@@ -53,7 +52,6 @@ import org.springframework.web.multipart.MultipartFile;
 public class MovieService {
 
     private static final String MOVIE_NOT_FOUND_MSG = "Movie not found with id: ";
-    private static final String MOVIE_ID_REQUIRED_MSG = "movieId";
     private static final String DIRECTOR_NOT_FOUND_MSG = "Director not found";
     private static final String STUDIO_NOT_FOUND_MSG = "Studio not found";
     private static final String GENRES_NOT_FOUND_MSG = "Genres not found with ids: ";
@@ -78,7 +76,7 @@ public class MovieService {
     private final MovieByIdCache movieByIdCache;
     private final MovieSearchCache movieSearchCache;
     private final ObjectProvider<MovieService> movieServiceProvider;
-    private final ConcurrentMap<Long, Object> movieViewLocks = new ConcurrentHashMap<>();
+    private final MovieViewWriteBehindService movieViewWriteBehindService;
 
     public String uploadPoster(@NonNull Long id, MultipartFile file) {
         Movie movie = movieRepository.findById(id)
@@ -96,7 +94,7 @@ public class MovieService {
 
     public List<MovieResponseDto> getAll() {
         return movieRepository.findAllWithDetails().stream()
-                .map(MovieMapper::toResponseDto)
+                .map(this::toResponseDtoWithCurrentViewCount)
                 .toList();
     }
 
@@ -113,7 +111,7 @@ public class MovieService {
 
     public List<MovieResponseDto> getAllNPlusOneDemo() {
         return movieRepository.findAll().stream()
-                .map(MovieMapper::toResponseDto)
+                .map(this::toResponseDtoWithCurrentViewCount)
                 .toList();
     }
 
@@ -127,13 +125,13 @@ public class MovieService {
         log.info("MOVIE BY ID CACHE MISS: movieId={}", id);
         Movie movie = movieRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new ResourceNotFoundException(MOVIE_NOT_FOUND_MSG + id));
-        MovieResponseDto loadedMovie = MovieMapper.toResponseDto(movie);
+        MovieResponseDto loadedMovie = toResponseDtoWithCurrentViewCount(movie);
         movieByIdCache.put(id, loadedMovie);
         return loadedMovie;
     }
 
     public ViewCountResponseDto incrementViewCount(@NonNull Long movieId) {
-        long updatedViewCount = incrementViewCountSafelyInternal(movieId);
+        long updatedViewCount = movieViewWriteBehindService.incrementPendingAndGetCurrentViewCount(movieId);
         invalidateCaches("MovieService.incrementViewCount movieId=" + movieId);
         return new ViewCountResponseDto(movieId, updatedViewCount);
     }
@@ -144,11 +142,13 @@ public class MovieService {
             int threads,
             int incrementsPerThread) {
         String normalizedMode = normalizeRaceMode(mode);
-        long initialViewCount = getCurrentViewCount(movieId);
+        movieViewWriteBehindService.ensureMovieExists(movieId);
         long expectedCount = (long) threads * incrementsPerThread;
         CountDownLatch startLatch = new CountDownLatch(1);
         ExecutorService executor = Executors.newFixedThreadPool(threads);
         List<Future<?>> futures = new ArrayList<>(threads);
+        AtomicLong safeCounter = new AtomicLong(0L);
+        UnsafeCounter unsafeCounter = new UnsafeCounter();
         long startedAtNanos = System.nanoTime();
         try {
             for (int threadIndex = 0; threadIndex < threads; threadIndex++) {
@@ -156,9 +156,9 @@ public class MovieService {
                     awaitRaceStart(startLatch);
                     for (int incrementIndex = 0; incrementIndex < incrementsPerThread; incrementIndex++) {
                         if (MODE_SAFE.equals(normalizedMode)) {
-                            incrementViewCountSafelyInternal(movieId);
+                            safeCounter.incrementAndGet();
                         } else {
-                            incrementViewCountUnsafelyInternal(movieId);
+                            unsafeCounter.increment();
                         }
                     }
                 });
@@ -167,9 +167,9 @@ public class MovieService {
             startLatch.countDown();
             waitForRaceCompletion(futures);
             long durationMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAtNanos);
-            long finalViewCount = getCurrentViewCount(movieId);
-            long actualCount = finalViewCount - initialViewCount;
+            long actualCount = MODE_SAFE.equals(normalizedMode) ? safeCounter.get() : unsafeCounter.get();
             long lostUpdates = Math.max(0, expectedCount - actualCount);
+            movieViewWriteBehindService.addPendingDeltaAndGetCurrentViewCount(movieId, actualCount);
             invalidateCaches("MovieService.runViewRaceDemo movieId=" + movieId + " mode=" + normalizedMode);
             return new ViewRaceDemoResponseDto(
                     movieId,
@@ -279,7 +279,7 @@ public class MovieService {
         }
 
         Movie savedMovie = movieRepository.save(Objects.requireNonNull(movie, "movie"));
-        return MovieMapper.toResponseDto(savedMovie);
+        return toResponseDtoWithCurrentViewCount(savedMovie);
     }
 
     @Transactional
@@ -322,7 +322,7 @@ public class MovieService {
 
         Movie updatedMovie = movieRepository.save(movie);
         invalidateCaches("MovieService.update movieId=" + id);
-        return MovieMapper.toResponseDto(updatedMovie);
+        return toResponseDtoWithCurrentViewCount(updatedMovie);
     }
 
     @Transactional
@@ -361,40 +361,12 @@ public class MovieService {
 
         Movie updatedMovie = movieRepository.save(Objects.requireNonNull(movie, "movie"));
         invalidateCaches("MovieService.patch movieId=" + id);
-        return MovieMapper.toResponseDto(updatedMovie);
+        return toResponseDtoWithCurrentViewCount(updatedMovie);
     }
 
     private void invalidateCaches(String reason) {
         movieSearchCache.invalidate(reason);
         movieByIdCache.invalidate(reason);
-    }
-
-    private long getCurrentViewCount(Long movieId) {
-        Long safeMovieId = Objects.requireNonNull(movieId, MOVIE_ID_REQUIRED_MSG);
-        Movie movie = movieRepository.findById(safeMovieId)
-                .orElseThrow(() -> new ResourceNotFoundException(MOVIE_NOT_FOUND_MSG + safeMovieId));
-        Long viewCount = movie.getViewCount();
-        return viewCount != null ? viewCount : 0L;
-    }
-
-    private long incrementViewCountSafelyInternal(Long movieId) {
-        Long safeMovieId = Objects.requireNonNull(movieId, MOVIE_ID_REQUIRED_MSG);
-        Object lock = movieViewLocks.computeIfAbsent(safeMovieId, id -> new Object());
-        synchronized (lock) {
-            return incrementViewCountUnsafelyInternal(safeMovieId);
-        }
-    }
-
-    private long incrementViewCountUnsafelyInternal(Long movieId) {
-        Long safeMovieId = Objects.requireNonNull(movieId, MOVIE_ID_REQUIRED_MSG);
-        Movie movie = movieRepository.findById(safeMovieId)
-                .orElseThrow(() -> new ResourceNotFoundException(MOVIE_NOT_FOUND_MSG + safeMovieId));
-        Long currentViewCount = movie.getViewCount();
-        long normalizedViewCount = currentViewCount != null ? currentViewCount : 0L;
-        movie.setViewCount(normalizedViewCount + 1);
-        Movie savedMovie = movieRepository.save(movie);
-        Long savedViewCount = savedMovie.getViewCount();
-        return savedViewCount != null ? savedViewCount : 0L;
     }
 
     private String normalizeRaceMode(String mode) {
@@ -443,6 +415,21 @@ public class MovieService {
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             executor.shutdownNow();
+        }
+    }
+
+    private static final class UnsafeCounter {
+
+        private long value;
+
+        private void increment() {
+            long currentValue = value;
+            Thread.yield();
+            value = currentValue + 1L;
+        }
+
+        private long get() {
+            return value;
         }
     }
 
@@ -518,16 +505,16 @@ public class MovieService {
                     normalizedStudioTitle,
                     pageable);
         }
-        return movieSearchPage.map(MovieService::toSearchResponseDto);
+        return movieSearchPage.map(this::toSearchResponseDto);
     }
 
-    private static MovieResponseDto toSearchResponseDto(MovieRepository.MovieSearchRowProjection row) {
+    private MovieResponseDto toSearchResponseDto(MovieRepository.MovieSearchRowProjection row) {
         MovieResponseDto dto = new MovieResponseDto();
         dto.setId(row.getId());
         dto.setTitle(row.getTitle());
         dto.setYear(row.getYear());
         dto.setDuration(row.getDuration());
-        dto.setViewCount(row.getViewCount());
+        dto.setViewCount(toCurrentViewCount(row.getId(), row.getViewCount()));
         dto.setPosterUrl(row.getPosterUrl());
         dto.setDirectorId(row.getDirectorId());
         dto.setDirectorLastName(row.getDirectorLastName());
@@ -537,5 +524,19 @@ public class MovieService {
         dto.setStudioTitle(row.getStudioTitle());
         dto.setGenres(List.of());
         return dto;
+    }
+
+    private MovieResponseDto toResponseDtoWithCurrentViewCount(Movie movie) {
+        Movie safeMovie = Objects.requireNonNull(movie, "movie");
+        MovieResponseDto dto = MovieMapper.toResponseDto(safeMovie);
+        dto.setViewCount(toCurrentViewCount(dto.getId(), dto.getViewCount()));
+        return dto;
+    }
+
+    private long toCurrentViewCount(Long movieId, Long persistedViewCount) {
+        Long safeMovieId = Objects.requireNonNull(movieId, "movieId");
+        long normalizedPersistedViewCount = persistedViewCount != null ? persistedViewCount : 0L;
+        long pendingViewDelta = movieViewWriteBehindService.getPendingDelta(safeMovieId);
+        return normalizedPersistedViewCount + pendingViewDelta;
     }
 }

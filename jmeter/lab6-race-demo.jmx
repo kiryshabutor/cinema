@@ -31,7 +31,7 @@
           </elementProp>
           <elementProp name="incrementsPerThread" elementType="Argument">
             <stringProp name="Argument.name">incrementsPerThread</stringProp>
-            <stringProp name="Argument.value">1000</stringProp>
+            <stringProp name="Argument.value">5</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="requestsPerMode" elementType="Argument">

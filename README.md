@@ -218,4 +218,9 @@ docker logs -f moviecat-app
 4. Запусти safe: `POST /api/movies/{movieId}/views/race-demo?mode=safe&threads=50&incrementsPerThread=1000`.
 5. Проверь, что `lostUpdates = 0`.
 
+Примечание по реализации счетчика просмотров:
+- `POST /api/movies/{id}/views` использует in-memory write-behind буфер.
+- Flush в БД (`movies.view_count`) выполняется каждые `30` секунд или при накоплении `1000` pending просмотров по фильму.
+- Ответ `viewCount` всегда считается как `DB + pending`.
+
 Подробные примеры запросов/ответов: [api_endpoints.md](api_endpoints.md).
