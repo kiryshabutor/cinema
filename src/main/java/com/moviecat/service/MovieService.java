@@ -52,6 +52,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class MovieService {
 
     private static final String MOVIE_NOT_FOUND_MSG = "Movie not found with id: ";
+    private static final String MOVIE_REQUIRED_MSG = "movie";
     private static final String DIRECTOR_NOT_FOUND_MSG = "Director not found";
     private static final String STUDIO_NOT_FOUND_MSG = "Studio not found";
     private static final String GENRES_NOT_FOUND_MSG = "Genres not found with ids: ";
@@ -278,7 +279,7 @@ public class MovieService {
             movie.setGenres(resolveGenresByIds(dto.getGenreIds()));
         }
 
-        Movie savedMovie = movieRepository.save(Objects.requireNonNull(movie, "movie"));
+        Movie savedMovie = movieRepository.save(Objects.requireNonNull(movie, MOVIE_REQUIRED_MSG));
         return toResponseDtoWithCurrentViewCount(savedMovie);
     }
 
@@ -359,7 +360,7 @@ public class MovieService {
             movie.setGenres(resolveGenresByIds(dto.getGenreIds()));
         }
 
-        Movie updatedMovie = movieRepository.save(Objects.requireNonNull(movie, "movie"));
+        Movie updatedMovie = movieRepository.save(Objects.requireNonNull(movie, MOVIE_REQUIRED_MSG));
         invalidateCaches("MovieService.patch movieId=" + id);
         return toResponseDtoWithCurrentViewCount(updatedMovie);
     }
@@ -527,7 +528,7 @@ public class MovieService {
     }
 
     private MovieResponseDto toResponseDtoWithCurrentViewCount(Movie movie) {
-        Movie safeMovie = Objects.requireNonNull(movie, "movie");
+        Movie safeMovie = Objects.requireNonNull(movie, MOVIE_REQUIRED_MSG);
         MovieResponseDto dto = MovieMapper.toResponseDto(safeMovie);
         dto.setViewCount(toCurrentViewCount(dto.getId(), dto.getViewCount()));
         return dto;
