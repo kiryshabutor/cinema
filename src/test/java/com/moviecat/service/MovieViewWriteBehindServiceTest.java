@@ -2,16 +2,22 @@ package com.moviecat.service;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.moviecat.exception.ResourceNotFoundException;
 import com.moviecat.repository.MovieRepository;
+import java.util.HashSet;
 import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -84,6 +90,20 @@ class MovieViewWriteBehindServiceTest {
     }
 
     @Test
+    void addPendingDeltaAndGetCurrentViewCount_shouldNotAutoFlush_whenThresholdDisabled() {
+        ReflectionTestUtils.setField(movieViewWriteBehindService, "flushThreshold", 0L);
+        when(movieRepository.findPersistedViewCountById(31L))
+                .thenReturn(Optional.of(20L))
+                .thenReturn(Optional.of(20L));
+
+        long result = movieViewWriteBehindService.addPendingDeltaAndGetCurrentViewCount(31L, 3L);
+
+        assertEquals(23L, result);
+        assertEquals(3L, movieViewWriteBehindService.getPendingDelta(31L));
+        verify(movieRepository, never()).incrementViewCountByDelta(anyLong(), anyLong());
+    }
+
+    @Test
     void flushAllPendingDeltas_shouldFlushPendingForEachMovie() {
         when(movieRepository.findPersistedViewCountById(10L))
                 .thenReturn(Optional.of(5L))
@@ -100,6 +120,54 @@ class MovieViewWriteBehindServiceTest {
 
         verify(movieRepository).incrementViewCountByDelta(10L, 2L);
         verify(movieRepository).incrementViewCountByDelta(11L, 3L);
+    }
+
+    @Test
+    void flushAllPendingDeltas_shouldSkipNullMovieIdEntry() {
+        @SuppressWarnings("unchecked")
+        ConcurrentMap<Long, AtomicLong> pendingMap = org.mockito.Mockito.mock(ConcurrentMap.class);
+        Set<Long> keysWithNull = new HashSet<>();
+        keysWithNull.add(null);
+        when(pendingMap.keySet()).thenReturn(keysWithNull);
+        ReflectionTestUtils.setField(movieViewWriteBehindService, "pendingViewDeltas", pendingMap);
+
+        movieViewWriteBehindService.flushAllPendingDeltas();
+
+        verifyNoInteractions(movieRepository);
+    }
+
+    @Test
+    void flushMoviePendingDelta_shouldReturn_whenPendingCounterIsMissing() {
+        movieViewWriteBehindService.flushMoviePendingDelta(99L);
+
+        verifyNoInteractions(movieRepository);
+    }
+
+    @Test
+    void flushMoviePendingDelta_shouldRemoveCounter_whenDeltaIsZero() {
+        @SuppressWarnings("unchecked")
+        ConcurrentMap<Long, AtomicLong> pendingMap =
+                (ConcurrentMap<Long, AtomicLong>) ReflectionTestUtils.getField(movieViewWriteBehindService, "pendingViewDeltas");
+        pendingMap.put(88L, new AtomicLong(0L));
+
+        movieViewWriteBehindService.flushMoviePendingDelta(88L);
+
+        assertFalse(pendingMap.containsKey(88L));
+        verifyNoInteractions(movieRepository);
+    }
+
+    @Test
+    void flushMoviePendingDelta_shouldNotFail_whenMovieDisappearedDuringFlush() {
+        when(movieRepository.findPersistedViewCountById(41L))
+                .thenReturn(Optional.of(10L))
+                .thenReturn(Optional.of(10L));
+        when(movieRepository.incrementViewCountByDelta(41L, 4L)).thenReturn(0);
+
+        movieViewWriteBehindService.addPendingDeltaAndGetCurrentViewCount(41L, 4L);
+
+        assertDoesNotThrow(() -> movieViewWriteBehindService.flushMoviePendingDelta(41L));
+        assertEquals(0L, movieViewWriteBehindService.getPendingDelta(41L));
+        verify(movieRepository).incrementViewCountByDelta(41L, 4L);
     }
 
     @Test

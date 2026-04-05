@@ -42,6 +42,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -897,6 +898,35 @@ class MovieServiceTest {
     }
 
     @Test
+    void waitForRaceCompletion_shouldRethrowRuntimeCause_whenFutureFails() throws Exception {
+        Future<?> failedFuture = org.mockito.Mockito.mock(Future.class);
+        List<Future<?>> futures = List.of(failedFuture);
+        IllegalStateException cause = new IllegalStateException("runtime failure");
+        when(failedFuture.get()).thenThrow(new ExecutionException(cause));
+
+        IllegalStateException exception = assertThrows(
+                IllegalStateException.class,
+                () -> ReflectionTestUtils.invokeMethod(movieService, "waitForRaceCompletion", futures));
+
+        assertSame(cause, exception);
+    }
+
+    @Test
+    void waitForRaceCompletion_shouldWrapCheckedCause_whenFutureFails() throws Exception {
+        Future<?> failedFuture = org.mockito.Mockito.mock(Future.class);
+        List<Future<?>> futures = List.of(failedFuture);
+        Exception checkedCause = new Exception("checked failure");
+        when(failedFuture.get()).thenThrow(new ExecutionException(checkedCause));
+
+        IllegalStateException exception = assertThrows(
+                IllegalStateException.class,
+                () -> ReflectionTestUtils.invokeMethod(movieService, "waitForRaceCompletion", futures));
+
+        assertEquals("Race demo failed", exception.getMessage());
+        assertSame(checkedCause, exception.getCause());
+    }
+
+    @Test
     void shutdownExecutor_shouldForceShutdown_whenAwaitTerminationReturnsFalse() throws Exception {
         ExecutorService executor = org.mockito.Mockito.mock(ExecutorService.class);
         when(executor.awaitTermination(10, TimeUnit.SECONDS)).thenReturn(false);
@@ -936,6 +966,15 @@ class MovieServiceTest {
         verify(movieViewWriteBehindService).addPendingDeltaAndGetCurrentViewCount(7L, 250L);
         verify(movieSearchCache).invalidate("MovieService.runViewRaceDemo movieId=7 mode=safe");
         verify(movieByIdCache).invalidate("MovieService.runViewRaceDemo movieId=7 mode=safe");
+    }
+
+    @Test
+    void toCurrentViewCount_shouldTreatNullPersistedValueAsZero() {
+        when(movieViewWriteBehindService.getPendingDelta(99L)).thenReturn(6L);
+
+        Long result = ReflectionTestUtils.invokeMethod(movieService, "toCurrentViewCount", 99L, (Long) null);
+
+        assertEquals(6L, result);
     }
 
     private MovieCreateDto createDto() {
