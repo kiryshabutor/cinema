@@ -2,11 +2,12 @@ package com.moviecat.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Schema(description = "Async task status details")
 public record TaskStatusResponseDto(
-        @Schema(description = "Task ID", example = "1")
-        Long taskId,
+        @Schema(description = "Task ID", example = "550e8400-e29b-41d4-a716-446655440000")
+        UUID taskId,
         @Schema(description = "Current status", example = "RUNNING")
         TaskExecutionStatus status,
         @Schema(description = "Task creation timestamp", example = "2026-03-30T19:00:00")

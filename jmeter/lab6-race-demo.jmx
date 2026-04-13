@@ -41,50 +41,46 @@
           </elementProp>
         </collectionProp>
       </elementProp>
-      <stringProp name="TestPlan.user_define_classpath"/>
+      <stringProp name="TestPlan.user_define_classpath"></stringProp>
     </TestPlan>
     <hashTree>
-      <ConfigTestElement guiclass="HttpDefaultsGui" testclass="ConfigTestElement" testname="HTTP Request Defaults" enabled="true">
-        <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
-          <collectionProp name="Arguments.arguments"/>
-        </elementProp>
+      <ConfigTestElement guiclass="HttpDefaultsGui" testclass="ConfigTestElement" testname="HTTP Request Defaults">
         <stringProp name="HTTPSampler.domain">${host}</stringProp>
         <stringProp name="HTTPSampler.port">${port}</stringProp>
         <stringProp name="HTTPSampler.protocol">http</stringProp>
+        <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
+          <collectionProp name="Arguments.arguments"/>
+        </elementProp>
+        <stringProp name="HTTPSampler.implementation"></stringProp>
       </ConfigTestElement>
       <hashTree/>
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Thread Group A - unsafe" enabled="true">
+        <intProp name="ThreadGroup.num_threads">1</intProp>
+        <intProp name="ThreadGroup.ramp_time">1</intProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
-        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
-          <boolProp name="LoopController.continue_forever">false</boolProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller">
           <stringProp name="LoopController.loops">${requestsPerMode}</stringProp>
+          <boolProp name="LoopController.continue_forever">false</boolProp>
         </elementProp>
-        <stringProp name="ThreadGroup.num_threads">1</stringProp>
-        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
-        <boolProp name="ThreadGroup.scheduler">false</boolProp>
-        <stringProp name="ThreadGroup.duration"/>
-        <stringProp name="ThreadGroup.delay"/>
       </ThreadGroup>
       <hashTree>
         <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="POST race-demo unsafe" enabled="true">
-          <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+          <stringProp name="HTTPSampler.path">/api/movies/${movieId}/views/race-demo?mode=unsafe&amp;threads=${threads}&amp;incrementsPerThread=${incrementsPerThread}</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
             <collectionProp name="Arguments.arguments"/>
           </elementProp>
-          <stringProp name="HTTPSampler.path">/api/movies/${movieId}/views/race-demo?mode=unsafe&amp;threads=${threads}&amp;incrementsPerThread=${incrementsPerThread}</stringProp>
-          <stringProp name="HTTPSampler.method">POST</stringProp>
-          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
-          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
-          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
-          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
-          <boolProp name="HTTPSampler.monitor">false</boolProp>
-          <stringProp name="HTTPSampler.embedded_url_re"/>
         </HTTPSamplerProxy>
         <hashTree>
           <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="HTTP 200 (unsafe)" enabled="true">
             <collectionProp name="Asserion.test_strings">
-              <stringProp name="0">200</stringProp>
+              <stringProp name="49586">200</stringProp>
             </collectionProp>
-            <stringProp name="Assertion.custom_message"/>
+            <stringProp name="Assertion.custom_message"></stringProp>
             <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
             <boolProp name="Assertion.assume_success">false</boolProp>
             <intProp name="Assertion.test_type">8</intProp>
@@ -92,53 +88,48 @@
           <hashTree/>
           <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Extract race metrics (unsafe)" enabled="true">
             <stringProp name="cacheKey">true</stringProp>
-            <stringProp name="filename"/>
-            <stringProp name="parameters"/>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="parameters"></stringProp>
             <stringProp name="script">import groovy.json.JsonSlurper
 
 def json = new JsonSlurper().parseText(prev.getResponseDataAsString())
-vars.put('mode', String.valueOf(json.mode))
-vars.put('expectedCount', String.valueOf(json.expectedCount))
-vars.put('actualCount', String.valueOf(json.actualCount))
-vars.put('lostUpdates', String.valueOf(json.lostUpdates))
-vars.put('durationMs', String.valueOf(json.durationMs))</stringProp>
+vars.put(&apos;mode&apos;, String.valueOf(json.mode))
+vars.put(&apos;expectedCount&apos;, String.valueOf(json.expectedCount))
+vars.put(&apos;actualCount&apos;, String.valueOf(json.actualCount))
+vars.put(&apos;lostUpdates&apos;, String.valueOf(json.lostUpdates))
+vars.put(&apos;durationMs&apos;, String.valueOf(json.durationMs))</stringProp>
             <stringProp name="scriptLanguage">groovy</stringProp>
           </JSR223PostProcessor>
           <hashTree/>
         </hashTree>
       </hashTree>
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Thread Group B - safe" enabled="true">
+        <intProp name="ThreadGroup.num_threads">1</intProp>
+        <intProp name="ThreadGroup.ramp_time">1</intProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
-        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
-          <boolProp name="LoopController.continue_forever">false</boolProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller">
           <stringProp name="LoopController.loops">${requestsPerMode}</stringProp>
+          <boolProp name="LoopController.continue_forever">false</boolProp>
         </elementProp>
-        <stringProp name="ThreadGroup.num_threads">1</stringProp>
-        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
-        <boolProp name="ThreadGroup.scheduler">false</boolProp>
-        <stringProp name="ThreadGroup.duration"/>
-        <stringProp name="ThreadGroup.delay"/>
       </ThreadGroup>
       <hashTree>
         <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="POST race-demo safe" enabled="true">
-          <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+          <stringProp name="HTTPSampler.path">/api/movies/${movieId}/views/race-demo?mode=safe&amp;threads=${threads}&amp;incrementsPerThread=${incrementsPerThread}</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
             <collectionProp name="Arguments.arguments"/>
           </elementProp>
-          <stringProp name="HTTPSampler.path">/api/movies/${movieId}/views/race-demo?mode=safe&amp;threads=${threads}&amp;incrementsPerThread=${incrementsPerThread}</stringProp>
-          <stringProp name="HTTPSampler.method">POST</stringProp>
-          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
-          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
-          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
-          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
-          <boolProp name="HTTPSampler.monitor">false</boolProp>
-          <stringProp name="HTTPSampler.embedded_url_re"/>
         </HTTPSamplerProxy>
         <hashTree>
           <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="HTTP 200 (safe)" enabled="true">
             <collectionProp name="Asserion.test_strings">
-              <stringProp name="0">200</stringProp>
+              <stringProp name="49586">200</stringProp>
             </collectionProp>
-            <stringProp name="Assertion.custom_message"/>
+            <stringProp name="Assertion.custom_message"></stringProp>
             <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
             <boolProp name="Assertion.assume_success">false</boolProp>
             <intProp name="Assertion.test_type">8</intProp>
@@ -146,36 +137,36 @@ vars.put('durationMs', String.valueOf(json.durationMs))</stringProp>
           <hashTree/>
           <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="Assert lostUpdates == 0 (safe)" enabled="true">
             <stringProp name="cacheKey">true</stringProp>
-            <stringProp name="filename"/>
-            <stringProp name="parameters"/>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="parameters"></stringProp>
             <stringProp name="script">import groovy.json.JsonSlurper
 
 def body = prev.getResponseDataAsString()
 def json = new JsonSlurper().parseText(body)
 if (!(json.lostUpdates instanceof Number) || json.lostUpdates.longValue() != 0L) {
-    throw new AssertionError('Expected lostUpdates=0 in safe mode, got: ' + json.lostUpdates + '; response=' + body)
+    throw new AssertionError(&apos;Expected lostUpdates=0 in safe mode, got: &apos; + json.lostUpdates + &apos;; response=&apos; + body)
 }</stringProp>
             <stringProp name="scriptLanguage">groovy</stringProp>
           </JSR223Assertion>
           <hashTree/>
           <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Extract race metrics (safe)" enabled="true">
             <stringProp name="cacheKey">true</stringProp>
-            <stringProp name="filename"/>
-            <stringProp name="parameters"/>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="parameters"></stringProp>
             <stringProp name="script">import groovy.json.JsonSlurper
 
 def json = new JsonSlurper().parseText(prev.getResponseDataAsString())
-vars.put('mode', String.valueOf(json.mode))
-vars.put('expectedCount', String.valueOf(json.expectedCount))
-vars.put('actualCount', String.valueOf(json.actualCount))
-vars.put('lostUpdates', String.valueOf(json.lostUpdates))
-vars.put('durationMs', String.valueOf(json.durationMs))</stringProp>
+vars.put(&apos;mode&apos;, String.valueOf(json.mode))
+vars.put(&apos;expectedCount&apos;, String.valueOf(json.expectedCount))
+vars.put(&apos;actualCount&apos;, String.valueOf(json.actualCount))
+vars.put(&apos;lostUpdates&apos;, String.valueOf(json.lostUpdates))
+vars.put(&apos;durationMs&apos;, String.valueOf(json.durationMs))</stringProp>
             <stringProp name="scriptLanguage">groovy</stringProp>
           </JSR223PostProcessor>
           <hashTree/>
         </hashTree>
       </hashTree>
-      <ResultCollector guiclass="SummaryReport" testclass="ResultCollector" testname="Summary Report" enabled="true">
+      <ResultCollector guiclass="SummaryReport" testclass="ResultCollector" testname="Summary Report">
         <boolProp name="ResultCollector.error_logging">false</boolProp>
         <objProp>
           <name>saveConfig</name>
@@ -209,7 +200,7 @@ vars.put('durationMs', String.valueOf(json.durationMs))</stringProp>
             <connectTime>true</connectTime>
           </value>
         </objProp>
-        <stringProp name="filename"/>
+        <stringProp name="filename"></stringProp>
       </ResultCollector>
       <hashTree/>
       <ResultCollector guiclass="StatGraphVisualizer" testclass="ResultCollector" testname="Aggregate Report" enabled="true">
@@ -246,7 +237,7 @@ vars.put('durationMs', String.valueOf(json.durationMs))</stringProp>
             <connectTime>true</connectTime>
           </value>
         </objProp>
-        <stringProp name="filename"/>
+        <stringProp name="filename"></stringProp>
       </ResultCollector>
       <hashTree/>
     </hashTree>

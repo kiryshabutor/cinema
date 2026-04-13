@@ -13,6 +13,7 @@ import static org.mockito.Mockito.verify;
 import com.moviecat.dto.ReviewCreateItemDto;
 import com.moviecat.exception.SimulatedFailureException;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,7 +39,7 @@ class ReviewAsyncWorkerServiceTest {
 
     @Test
     void executeBulkTask_shouldMarkCompleted_whenProcessingSucceeds() {
-        Long taskId = 1L;
+        UUID taskId = UUID.randomUUID();
         List<ReviewCreateItemDto> items = List.of(new ReviewCreateItemDto("alice", 9, "Great"));
 
         CompletableFuture<Void> future = reviewAsyncWorkerService.executeBulkTask(taskId, 7L, items, false, 0, 0);
@@ -46,13 +47,13 @@ class ReviewAsyncWorkerServiceTest {
         verify(reviewTaskRegistryService).markRunning(taskId);
         verify(reviewBulkProcessingService).createBulkTransactional(eq(7L), eq(items), eq(false), eq(0), any(Runnable.class));
         verify(reviewTaskRegistryService).markCompleted(taskId);
-        verify(reviewTaskRegistryService, never()).markFailed(anyLong(), any(String.class));
+        verify(reviewTaskRegistryService, never()).markFailed(any(UUID.class), any(String.class));
         assertTrue(future.isDone());
     }
 
     @Test
     void executeBulkTask_shouldMarkFailed_whenProcessingThrowsException() {
-        Long taskId = 2L;
+        UUID taskId = UUID.randomUUID();
         doThrow(new SimulatedFailureException("boom"))
                 .when(reviewBulkProcessingService)
                 .createBulkTransactional(anyLong(), anyList(), eq(true), eq(0), any(Runnable.class));
@@ -66,7 +67,7 @@ class ReviewAsyncWorkerServiceTest {
 
     @Test
     void executeBulkTask_shouldUseFallbackErrorMessage_whenExceptionHasNoMessage() {
-        Long taskId = 3L;
+        UUID taskId = UUID.randomUUID();
         doThrow(new RuntimeException())
                 .when(reviewBulkProcessingService)
                 .createBulkTransactional(anyLong(), anyList(), eq(false), eq(0), any(Runnable.class));
@@ -80,7 +81,7 @@ class ReviewAsyncWorkerServiceTest {
 
     @Test
     void executeBulkTask_shouldUseFallbackErrorMessage_whenExceptionMessageIsBlank() {
-        Long taskId = 5L;
+        UUID taskId = UUID.randomUUID();
         doThrow(new RuntimeException("   "))
                 .when(reviewBulkProcessingService)
                 .createBulkTransactional(anyLong(), anyList(), eq(false), eq(0), any(Runnable.class));
@@ -94,7 +95,7 @@ class ReviewAsyncWorkerServiceTest {
 
     @Test
     void executeBulkTask_shouldSleepAndIncrementProcessed_whenStartDelayIsPositive() {
-        Long taskId = 6L;
+        UUID taskId = UUID.randomUUID();
         doAnswer(invocation -> {
             Runnable onProcessed = invocation.getArgument(4);
             onProcessed.run();
@@ -110,7 +111,7 @@ class ReviewAsyncWorkerServiceTest {
 
     @Test
     void executeBulkTask_shouldMarkFailed_whenInterruptedBeforeStartDelay() {
-        Long taskId = 4L;
+        UUID taskId = UUID.randomUUID();
 
         Thread.currentThread().interrupt();
         try {

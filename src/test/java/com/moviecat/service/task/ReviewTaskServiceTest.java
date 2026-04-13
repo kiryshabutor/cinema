@@ -12,6 +12,7 @@ import com.moviecat.dto.TaskStartResponseDto;
 import com.moviecat.dto.TaskStatusResponseDto;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -36,7 +37,7 @@ class ReviewTaskServiceTest {
 
     @Test
     void startBulkCreateTask_shouldCreateTaskAndStartAsyncWorker() {
-        Long taskId = 1L;
+        UUID taskId = UUID.randomUUID();
         List<ReviewCreateItemDto> items = List.of(new ReviewCreateItemDto("alice", 9, "Great"));
         when(reviewTaskRegistryService.createTask(1)).thenReturn(taskId);
 
@@ -50,7 +51,7 @@ class ReviewTaskServiceTest {
 
     @Test
     void startBulkCreateTask_shouldTreatNullItemsAsEmptyList() {
-        Long taskId = 2L;
+        UUID taskId = UUID.randomUUID();
         when(reviewTaskRegistryService.createTask(0)).thenReturn(taskId);
 
         TaskStartResponseDto response = reviewTaskService.startBulkCreateTask(7L, null, false, 0, 0);
@@ -63,8 +64,9 @@ class ReviewTaskServiceTest {
 
     @Test
     void getTaskStatus_shouldDelegateToRegistry() {
+        UUID taskId = UUID.randomUUID();
         TaskStatusResponseDto expected = new TaskStatusResponseDto(
-                11L,
+                taskId,
                 TaskExecutionStatus.RUNNING,
                 LocalDateTime.now(),
                 LocalDateTime.now(),
@@ -72,11 +74,11 @@ class ReviewTaskServiceTest {
                 5,
                 2,
                 null);
-        when(reviewTaskRegistryService.getTaskStatus(11L)).thenReturn(expected);
+        when(reviewTaskRegistryService.getTaskStatus(taskId)).thenReturn(expected);
 
-        TaskStatusResponseDto actual = reviewTaskService.getTaskStatus(11L);
+        TaskStatusResponseDto actual = reviewTaskService.getTaskStatus(taskId);
 
         assertEquals(expected, actual);
-        verify(reviewTaskRegistryService).getTaskStatus(11L);
+        verify(reviewTaskRegistryService).getTaskStatus(taskId);
     }
 }

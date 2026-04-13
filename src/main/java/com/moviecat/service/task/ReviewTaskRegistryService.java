@@ -6,7 +6,7 @@ import com.moviecat.exception.ResourceNotFoundException;
 import java.time.LocalDateTime;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.UUID;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -14,37 +14,36 @@ public class ReviewTaskRegistryService {
 
     private static final String TASK_NOT_FOUND_MSG = "Task not found with id: ";
 
-    private final ConcurrentMap<Long, ReviewTaskState> tasks = new ConcurrentHashMap<>();
-    private final AtomicLong taskSequence = new AtomicLong(0);
+    private final ConcurrentMap<UUID, ReviewTaskState> tasks = new ConcurrentHashMap<>();
 
-    public Long createTask(int totalCount) {
-        long taskId = taskSequence.incrementAndGet();
+    public UUID createTask(int totalCount) {
+        UUID taskId = UUID.randomUUID();
         int normalizedTotalCount = Math.max(totalCount, 0);
         tasks.put(taskId, new ReviewTaskState(taskId, normalizedTotalCount));
         return taskId;
     }
 
-    public TaskStatusResponseDto getTaskStatus(Long taskId) {
+    public TaskStatusResponseDto getTaskStatus(UUID taskId) {
         return getTaskState(taskId).toResponseDto();
     }
 
-    public void markRunning(Long taskId) {
+    public void markRunning(UUID taskId) {
         getTaskState(taskId).markRunning();
     }
 
-    public void incrementProcessed(Long taskId) {
+    public void incrementProcessed(UUID taskId) {
         getTaskState(taskId).incrementProcessed();
     }
 
-    public void markCompleted(Long taskId) {
+    public void markCompleted(UUID taskId) {
         getTaskState(taskId).markCompleted();
     }
 
-    public void markFailed(Long taskId, String errorMessage) {
+    public void markFailed(UUID taskId, String errorMessage) {
         getTaskState(taskId).markFailed(errorMessage);
     }
 
-    private ReviewTaskState getTaskState(Long taskId) {
+    private ReviewTaskState getTaskState(UUID taskId) {
         ReviewTaskState taskState = tasks.get(taskId);
         if (taskState == null) {
             throw new ResourceNotFoundException(TASK_NOT_FOUND_MSG + taskId);
@@ -53,7 +52,7 @@ public class ReviewTaskRegistryService {
     }
 
     private static final class ReviewTaskState {
-        private final Long taskId;
+        private final UUID taskId;
         private final int totalCount;
         private final LocalDateTime createdAt;
         private TaskExecutionStatus status;
@@ -62,7 +61,7 @@ public class ReviewTaskRegistryService {
         private int processedCount;
         private String errorMessage;
 
-        private ReviewTaskState(Long taskId, int totalCount) {
+        private ReviewTaskState(UUID taskId, int totalCount) {
             this.taskId = taskId;
             this.totalCount = totalCount;
             this.createdAt = LocalDateTime.now();

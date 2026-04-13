@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import com.moviecat.dto.TaskExecutionStatus;
 import com.moviecat.dto.TaskStatusResponseDto;
 import com.moviecat.exception.ResourceNotFoundException;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -22,7 +23,7 @@ class ReviewTaskRegistryServiceTest {
 
     @Test
     void createTask_shouldReturnCreatedStatus() {
-        Long taskId = reviewTaskRegistryService.createTask(3);
+        UUID taskId = reviewTaskRegistryService.createTask(3);
 
         TaskStatusResponseDto status = reviewTaskRegistryService.getTaskStatus(taskId);
 
@@ -38,7 +39,7 @@ class ReviewTaskRegistryServiceTest {
 
     @Test
     void markRunningAndCompleted_shouldUpdateStatusAndCounters() {
-        Long taskId = reviewTaskRegistryService.createTask(2);
+        UUID taskId = reviewTaskRegistryService.createTask(2);
 
         reviewTaskRegistryService.markRunning(taskId);
         reviewTaskRegistryService.incrementProcessed(taskId);
@@ -56,7 +57,7 @@ class ReviewTaskRegistryServiceTest {
 
     @Test
     void markFailed_shouldStoreFailureMessage() {
-        Long taskId = reviewTaskRegistryService.createTask(1);
+        UUID taskId = reviewTaskRegistryService.createTask(1);
 
         reviewTaskRegistryService.markRunning(taskId);
         reviewTaskRegistryService.markFailed(taskId, "boom");
@@ -70,14 +71,14 @@ class ReviewTaskRegistryServiceTest {
 
     @Test
     void getTaskStatus_shouldThrow_whenTaskDoesNotExist() {
-        Long missingTaskId = 999_999L;
+        UUID missingTaskId = UUID.randomUUID();
 
         assertThrows(ResourceNotFoundException.class, () -> reviewTaskRegistryService.getTaskStatus(missingTaskId));
     }
 
     @Test
     void createTask_shouldNormalizeNegativeTotalCountToZero() {
-        Long taskId = reviewTaskRegistryService.createTask(-7);
+        UUID taskId = reviewTaskRegistryService.createTask(-7);
 
         TaskStatusResponseDto status = reviewTaskRegistryService.getTaskStatus(taskId);
 
@@ -86,7 +87,7 @@ class ReviewTaskRegistryServiceTest {
 
     @Test
     void markRunning_shouldBeIdempotent_whenCalledMultipleTimes() {
-        Long taskId = reviewTaskRegistryService.createTask(1);
+        UUID taskId = reviewTaskRegistryService.createTask(1);
 
         reviewTaskRegistryService.markRunning(taskId);
         TaskStatusResponseDto firstStatus = reviewTaskRegistryService.getTaskStatus(taskId);

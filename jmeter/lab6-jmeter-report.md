@@ -19,13 +19,14 @@ The plan includes:
 ## Preconditions
 - API + DB are running.
 - `movieId` exists in DB.
-- Apache JMeter is installed locally.
+- Use `./scripts/jmeter.sh` from this repository. It bootstraps Apache JMeter `5.6.3` into `/tmp/tools`.
+- Do not use the Ubuntu `jmeter` package (`/usr/bin/jmeter`): on this machine it is `2.13.19691222`, which crashes on Java 17 and cannot load this test plan correctly.
 
 ## Run commands
 ```bash
 mkdir -p jmeter/results
 
-jmeter -n \
+./scripts/jmeter.sh -n \
   -t jmeter/lab6-race-demo.jmx \
   -Jhost=localhost \
   -Jport=8080 \
@@ -38,7 +39,7 @@ jmeter -n \
   -Jjmeter.save.saveservice.print_field_names=true \
   -l jmeter/results/lab6-race-run1.jtl
 
-jmeter -g jmeter/results/lab6-race-run1.jtl -o jmeter/results/dashboard-run1
+./scripts/jmeter.sh -g jmeter/results/lab6-race-run1.jtl -o jmeter/results/dashboard-run1
 ```
 
 Repeat the non-GUI run command for `run2..run5` by changing output file names.

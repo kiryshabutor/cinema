@@ -9,7 +9,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.constraints.Positive;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -39,7 +39,7 @@ public class TaskController {
 
     @GetMapping("/{taskId}")
     @Operation(summary = "Get async task status by task ID")
-    public ResponseEntity<TaskStatusResponseDto> getTaskStatus(@PathVariable @Positive Long taskId) {
+    public ResponseEntity<TaskStatusResponseDto> getTaskStatus(@PathVariable UUID taskId) {
         return ResponseEntity.ok(reviewTaskService.getTaskStatus(taskId));
     }
 }

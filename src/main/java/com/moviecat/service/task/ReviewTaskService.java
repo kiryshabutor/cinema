@@ -6,6 +6,7 @@ import com.moviecat.dto.TaskStartResponseDto;
 import com.moviecat.dto.TaskStatusResponseDto;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -23,7 +24,7 @@ public class ReviewTaskService {
             int startDelaySec,
             int itemDelaySec) {
         List<ReviewCreateItemDto> safeItems = Optional.ofNullable(reviewItems).orElseGet(List::of);
-        Long taskId = reviewTaskRegistryService.createTask(safeItems.size());
+        UUID taskId = reviewTaskRegistryService.createTask(safeItems.size());
         reviewAsyncWorkerService.executeBulkTask(
                 taskId,
                 movieId,
@@ -34,7 +35,7 @@ public class ReviewTaskService {
         return new TaskStartResponseDto(taskId, TaskExecutionStatus.CREATED);
     }
 
-    public TaskStatusResponseDto getTaskStatus(Long taskId) {
+    public TaskStatusResponseDto getTaskStatus(UUID taskId) {
         return reviewTaskRegistryService.getTaskStatus(taskId);
     }
 }

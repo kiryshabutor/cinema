@@ -4,6 +4,7 @@ import com.moviecat.dto.ReviewCreateItemDto;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -20,7 +21,7 @@ public class ReviewAsyncWorkerService {
 
     @Async("reviewTaskExecutor")
     public CompletableFuture<Void> executeBulkTask(
-            Long taskId,
+            UUID taskId,
             Long movieId,
             List<ReviewCreateItemDto> reviewItems,
             boolean failOnPurpose,
