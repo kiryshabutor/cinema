@@ -15,6 +15,7 @@ MovieCat — REST API каталога фильмов на Spring Boot + Postgre
 - Spring Web
 - Spring Data JPA (Hibernate)
 - PostgreSQL 16
+- Vue 3 + Vite (SPA client)
 - Lombok
 - Maven + Checkstyle
 - Docker / Docker Compose
@@ -52,7 +53,35 @@ DB_USERNAME=moviecat
 DB_PASSWORD=moviecat
 ```
 
-## Seed данных (100 реальных фильмов)
+## Frontend (Лаба 7)
+
+SPA-клиент расположен в `frontend/` и работает с тем же API.
+
+### Dev-режим (Vite + proxy)
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Открыть:
+- `http://localhost:5173/app/#/movies`
+
+### Встроить SPA в Spring static (для лабы 8 / Docker)
+
+```bash
+cd frontend
+npm run build:backend
+```
+
+Команда собирает `dist` и копирует его в:
+- `src/main/resources/static/app`
+
+После этого SPA отдается Spring-приложением по адресу:
+- `http://localhost:8080/app/#/movies`
+
+## Seed данных (1000 реальных фильмов + отзывы)
 
 Скрипт полностью очищает и заново заполняет таблицы:
 - `directors`
@@ -60,6 +89,19 @@ DB_PASSWORD=moviecat
 - `studios`
 - `movies`
 - `movie_genre`
+- `reviews`
+
+После запуска сид генерирует:
+- `1000` фильмов
+- `443` режиссёра
+- `251` студию
+- `13` жанров
+- от `30` до `150` отзывов на каждый фильм
+- реальные постеры из Wikipedia для большинства фильмов и SVG-фолбек для промахов в `uploads/seed-posters`
+
+Основа сид-данных теперь собирается из реального IMDb-derived CSV через:
+- `scripts/db/build_real_seed_sql.py`
+- `scripts/db/fetch_seed_posters.py`
 
 Запуск:
 
@@ -135,7 +177,7 @@ GET /api/movies/search
 - `CACHE INVALIDATED` — кеш очищен после мутаций
 
 Инвалидация movie-кеша:
-- `Movie`: create/update/patch/delete/uploadPoster -> полный сброс search/by-id кеша.
+- `Movie`: create/update/patch/delete/uploadPoster/importPoster -> полный сброс search/by-id кеша.
 - `Director`/`Genre`/`Studio` `update` -> полный сброс только search-кеша + точечный `evict` by-id кеша для связанных фильмов.
 - `Director`/`Genre`/`Studio` `create` и `delete` (когда нет связанных фильмов) -> movie-кеш не сбрасывается.
 
@@ -175,6 +217,14 @@ docker logs -f moviecat-app
 - `PATCH /api/movies/{id}`
 - `DELETE /api/movies/{id}`
 - `POST /api/movies/{id}/poster`
+- `POST /api/movies/{id}/poster/import` (импорт постера по TMDB posterPath)
+- `POST /api/movies/{id}/poster/scrape` (поиск постера через Wikipedia API и сохранение в uploads)
+
+### Posters
+- `GET /api/posters/tmdb/search` (поиск постеров в TMDB)
+
+Примечание:
+- Для `POST /api/movies/{id}/poster/scrape` API-ключ не нужен.
 
 ### Directors
 - `GET /api/directors` (Page)

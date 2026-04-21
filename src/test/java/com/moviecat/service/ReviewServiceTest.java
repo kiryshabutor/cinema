@@ -15,6 +15,8 @@ import com.moviecat.model.Movie;
 import com.moviecat.model.Review;
 import com.moviecat.repository.MovieRepository;
 import com.moviecat.repository.ReviewRepository;
+import com.moviecat.service.cache.MovieByIdCache;
+import com.moviecat.service.cache.MovieSearchCache;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -38,11 +40,17 @@ class ReviewServiceTest {
     @Mock
     private MovieRepository movieRepository;
 
+    @Mock
+    private MovieByIdCache movieByIdCache;
+
+    @Mock
+    private MovieSearchCache movieSearchCache;
+
     private ReviewService reviewService;
 
     @BeforeEach
     void setUp() {
-        reviewService = new ReviewService(reviewRepository, movieRepository);
+        reviewService = new ReviewService(reviewRepository, movieRepository, movieByIdCache, movieSearchCache);
     }
 
     @Test
@@ -132,6 +140,8 @@ class ReviewServiceTest {
         assertEquals(15L, result.getId());
         assertEquals(7L, result.getMovieId());
         assertEquals(8, result.getRating());
+        verify(movieSearchCache).invalidate("ReviewService.create movieId=7");
+        verify(movieByIdCache).evictAll(List.of(7L), "ReviewService.create movieId=7");
     }
 
     private Review review(Long id, String authorAlias, Integer rating, String comment) {

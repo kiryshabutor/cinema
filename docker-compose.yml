@@ -11,6 +11,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/moviecat_db
       DB_USERNAME: moviecat
       DB_PASSWORD: moviecat
+      TMDB_API_KEY: ${TMDB_API_KEY:-}
     depends_on:
       - postgres
     restart: on-failure

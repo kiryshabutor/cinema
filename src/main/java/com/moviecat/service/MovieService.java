@@ -17,14 +17,20 @@ import com.moviecat.model.Studio;
 import com.moviecat.repository.DirectorRepository;
 import com.moviecat.repository.GenreRepository;
 import com.moviecat.repository.MovieRepository;
+import com.moviecat.repository.ReviewRepository;
 import com.moviecat.repository.StudioRepository;
 import com.moviecat.service.cache.MovieByIdCache;
 import com.moviecat.service.cache.MovieSearchCache;
 import com.moviecat.service.cache.MovieSearchKey;
+import java.io.ByteArrayInputStream;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
@@ -67,17 +73,21 @@ public class MovieService {
     private static final String DEFAULT_SORT_FIELD = "title";
     private static final String DEFAULT_DIRECTION = "asc";
     private static final String DESC_DIRECTION = "desc";
-    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of(DEFAULT_SORT_FIELD, "year", "viewCount", "id");
+    private static final Set<String> ALLOWED_SORT_FIELDS =
+            Set.of(DEFAULT_SORT_FIELD, "year", "viewCount", "id", "directorLastName", "studioTitle", "averageRating");
 
     private final MovieRepository movieRepository;
     private final DirectorRepository directorRepository;
     private final StudioRepository studioRepository;
     private final GenreRepository genreRepository;
+    private final ReviewRepository reviewRepository;
     private final FileStorageService fileStorageService;
     private final MovieByIdCache movieByIdCache;
     private final MovieSearchCache movieSearchCache;
     private final ObjectProvider<MovieService> movieServiceProvider;
     private final MovieViewWriteBehindService movieViewWriteBehindService;
+    private final TmdbPosterService tmdbPosterService;
+    private final WikipediaPosterService wikipediaPosterService;
 
     public String uploadPoster(@NonNull Long id, MultipartFile file) {
         Movie movie = movieRepository.findById(id)
@@ -93,9 +103,45 @@ public class MovieService {
         return fileUrl;
     }
 
+    public String importPosterFromTmdb(@NonNull Long id, String posterPath) {
+        Movie movie = movieRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(MOVIE_NOT_FOUND_MSG + id));
+
+        TmdbPosterService.DownloadedPoster downloadedPoster = tmdbPosterService.downloadPoster(posterPath);
+        String filename = fileStorageService.storeFile(
+                new ByteArrayInputStream(downloadedPoster.content()),
+                downloadedPoster.extension());
+        String fileUrl = "/uploads/" + filename;
+
+        movie.setPosterUrl(fileUrl);
+        movieRepository.save(movie);
+
+        invalidateCaches("MovieService.importPosterFromTmdb movieId=" + id);
+        return fileUrl;
+    }
+
+    public String scrapePosterFromWikipedia(@NonNull Long id, String query, Integer year) {
+        Movie movie = movieRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(MOVIE_NOT_FOUND_MSG + id));
+
+        WikipediaPosterService.DownloadedPoster downloadedPoster = wikipediaPosterService.scrapePoster(query, year);
+        String filename = fileStorageService.storeFile(
+                new ByteArrayInputStream(downloadedPoster.content()),
+                downloadedPoster.extension());
+        String fileUrl = "/uploads/" + filename;
+
+        movie.setPosterUrl(fileUrl);
+        movieRepository.save(movie);
+
+        invalidateCaches("MovieService.scrapePosterFromWikipedia movieId=" + id);
+        return fileUrl;
+    }
+
     public List<MovieResponseDto> getAll() {
-        return movieRepository.findAllWithDetails().stream()
-                .map(this::toResponseDtoWithCurrentViewCount)
+        List<Movie> movies = movieRepository.findAllWithDetails();
+        Map<Long, MovieRatingSummary> ratingSummaries = loadRatingSummaries(movies.stream().map(Movie::getId).toList());
+        return movies.stream()
+                .map(movie -> toResponseDtoWithCurrentViewCount(movie, ratingSummaries.get(movie.getId())))
                 .toList();
     }
 
@@ -111,8 +157,10 @@ public class MovieService {
     }
 
     public List<MovieResponseDto> getAllNPlusOneDemo() {
-        return movieRepository.findAll().stream()
-                .map(this::toResponseDtoWithCurrentViewCount)
+        List<Movie> movies = movieRepository.findAll();
+        Map<Long, MovieRatingSummary> ratingSummaries = loadRatingSummaries(movies.stream().map(Movie::getId).toList());
+        return movies.stream()
+                .map(movie -> toResponseDtoWithCurrentViewCount(movie, ratingSummaries.get(movie.getId())))
                 .toList();
     }
 
@@ -126,7 +174,8 @@ public class MovieService {
         log.info("MOVIE BY ID CACHE MISS: movieId={}", id);
         Movie movie = movieRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new ResourceNotFoundException(MOVIE_NOT_FOUND_MSG + id));
-        MovieResponseDto loadedMovie = toResponseDtoWithCurrentViewCount(movie);
+        MovieResponseDto loadedMovie =
+                toResponseDtoWithCurrentViewCount(movie, loadRatingSummaries(List.of(id)).get(id));
         movieByIdCache.put(id, loadedMovie);
         return loadedMovie;
     }
@@ -280,7 +329,8 @@ public class MovieService {
         }
 
         Movie savedMovie = movieRepository.save(Objects.requireNonNull(movie, MOVIE_REQUIRED_MSG));
-        return toResponseDtoWithCurrentViewCount(savedMovie);
+        return toResponseDtoWithCurrentViewCount(savedMovie, loadRatingSummaries(List.of(savedMovie.getId()))
+                .get(savedMovie.getId()));
     }
 
     @Transactional
@@ -323,7 +373,8 @@ public class MovieService {
 
         Movie updatedMovie = movieRepository.save(movie);
         invalidateCaches("MovieService.update movieId=" + id);
-        return toResponseDtoWithCurrentViewCount(updatedMovie);
+        return toResponseDtoWithCurrentViewCount(updatedMovie, loadRatingSummaries(List.of(updatedMovie.getId()))
+                .get(updatedMovie.getId()));
     }
 
     @Transactional
@@ -362,7 +413,8 @@ public class MovieService {
 
         Movie updatedMovie = movieRepository.save(Objects.requireNonNull(movie, MOVIE_REQUIRED_MSG));
         invalidateCaches("MovieService.patch movieId=" + id);
-        return toResponseDtoWithCurrentViewCount(updatedMovie);
+        return toResponseDtoWithCurrentViewCount(updatedMovie, loadRatingSummaries(List.of(updatedMovie.getId()))
+                .get(updatedMovie.getId()));
     }
 
     private void invalidateCaches(String reason) {
@@ -482,9 +534,10 @@ public class MovieService {
         String normalizedDirection = key.pagingOptions().direction();
         boolean nativeQuery = key.nativeQuery();
 
+        boolean requiresNativeSort = "averageRating".equals(normalizedSort);
         Pageable pageable;
         Page<MovieRepository.MovieSearchRowProjection> movieSearchPage;
-        if (nativeQuery) {
+        if (nativeQuery || requiresNativeSort) {
             pageable = PageRequest.of(normalizedPage, normalizedSize);
             movieSearchPage = movieRepository.searchAdvancedNative(
                     normalizedTitle,
@@ -498,7 +551,7 @@ public class MovieService {
             pageable = PageRequest.of(
                     normalizedPage,
                     normalizedSize,
-                    PagingSortingUtils.buildSort(normalizedSort, normalizedDirection, DESC_DIRECTION));
+                    buildMovieSort(normalizedSort, normalizedDirection));
             movieSearchPage = movieRepository.searchAdvancedJpql(
                     normalizedTitle,
                     normalizedDirectorLastName,
@@ -506,10 +559,14 @@ public class MovieService {
                     normalizedStudioTitle,
                     pageable);
         }
-        return movieSearchPage.map(this::toSearchResponseDto);
+        Map<Long, MovieRatingSummary> ratingSummaries =
+                loadRatingSummaries(movieSearchPage.getContent().stream().map(MovieRepository.MovieSearchRowProjection::getId)
+                        .toList());
+        return movieSearchPage.map(row -> toSearchResponseDto(row, ratingSummaries.get(row.getId())));
     }
 
-    private MovieResponseDto toSearchResponseDto(MovieRepository.MovieSearchRowProjection row) {
+    private MovieResponseDto toSearchResponseDto(
+            MovieRepository.MovieSearchRowProjection row, MovieRatingSummary ratingSummary) {
         MovieResponseDto dto = new MovieResponseDto();
         dto.setId(row.getId());
         dto.setTitle(row.getTitle());
@@ -524,14 +581,62 @@ public class MovieService {
         dto.setStudioId(row.getStudioId());
         dto.setStudioTitle(row.getStudioTitle());
         dto.setGenres(List.of());
+        applyRatingSummary(dto, ratingSummary);
         return dto;
     }
 
-    private MovieResponseDto toResponseDtoWithCurrentViewCount(Movie movie) {
+    private MovieResponseDto toResponseDtoWithCurrentViewCount(Movie movie, MovieRatingSummary ratingSummary) {
         Movie safeMovie = Objects.requireNonNull(movie, MOVIE_REQUIRED_MSG);
         MovieResponseDto dto = MovieMapper.toResponseDto(safeMovie);
         dto.setViewCount(toCurrentViewCount(dto.getId(), dto.getViewCount()));
+        applyRatingSummary(dto, ratingSummary);
         return dto;
+    }
+
+    private Map<Long, MovieRatingSummary> loadRatingSummaries(Collection<Long> movieIds) {
+        if (movieIds == null) {
+            return Map.of();
+        }
+        List<Long> safeMovieIds = movieIds.stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        if (safeMovieIds.isEmpty()) {
+            return Map.of();
+        }
+
+        List<ReviewRepository.MovieRatingSummaryProjection> rawSummaries =
+                reviewRepository.summarizeRatingsByMovieIds(safeMovieIds);
+        if (rawSummaries == null || rawSummaries.isEmpty()) {
+            return Map.of();
+        }
+
+        return rawSummaries.stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        ReviewRepository.MovieRatingSummaryProjection::getMovieId,
+                        summary -> new MovieRatingSummary(
+                                normalizeAverageRating(summary.getAverageRating()),
+                                summary.getReviewCount() != null ? summary.getReviewCount() : 0L)));
+    }
+
+    private void applyRatingSummary(MovieResponseDto dto, MovieRatingSummary ratingSummary) {
+        MovieResponseDto safeDto = Objects.requireNonNull(dto, "dto");
+        if (ratingSummary == null) {
+            safeDto.setAverageRating(null);
+            safeDto.setReviewCount(0L);
+            return;
+        }
+        safeDto.setAverageRating(ratingSummary.averageRating());
+        safeDto.setReviewCount(ratingSummary.reviewCount());
+    }
+
+    private Double normalizeAverageRating(Double averageRating) {
+        if (averageRating == null) {
+            return null;
+        }
+        return BigDecimal.valueOf(averageRating)
+                .setScale(1, RoundingMode.HALF_UP)
+                .doubleValue();
     }
 
     private long toCurrentViewCount(Long movieId, Long persistedViewCount) {
@@ -539,5 +644,17 @@ public class MovieService {
         long normalizedPersistedViewCount = persistedViewCount != null ? persistedViewCount : 0L;
         long pendingViewDelta = movieViewWriteBehindService.getPendingDelta(safeMovieId);
         return normalizedPersistedViewCount + pendingViewDelta;
+    }
+
+    private org.springframework.data.domain.Sort buildMovieSort(String sortField, String sortDirection) {
+        String property = switch (sortField) {
+            case "directorLastName" -> "director.lastName";
+            case "studioTitle" -> "studio.title";
+            default -> sortField;
+        };
+        return PagingSortingUtils.buildSort(property, sortDirection, DESC_DIRECTION);
+    }
+
+    private record MovieRatingSummary(Double averageRating, long reviewCount) {
     }
 }

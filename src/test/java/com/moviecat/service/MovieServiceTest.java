@@ -32,10 +32,12 @@ import com.moviecat.model.Studio;
 import com.moviecat.repository.DirectorRepository;
 import com.moviecat.repository.GenreRepository;
 import com.moviecat.repository.MovieRepository;
+import com.moviecat.repository.ReviewRepository;
 import com.moviecat.repository.StudioRepository;
 import com.moviecat.service.cache.MovieByIdCache;
 import com.moviecat.service.cache.MovieSearchCache;
 import com.moviecat.service.cache.MovieSearchKey;
+import java.io.InputStream;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -76,6 +78,9 @@ class MovieServiceTest {
     private GenreRepository genreRepository;
 
     @Mock
+    private ReviewRepository reviewRepository;
+
+    @Mock
     private FileStorageService fileStorageService;
 
     @Mock
@@ -91,6 +96,12 @@ class MovieServiceTest {
     private MovieViewWriteBehindService movieViewWriteBehindService;
 
     @Mock
+    private TmdbPosterService tmdbPosterService;
+
+    @Mock
+    private WikipediaPosterService wikipediaPosterService;
+
+    @Mock
     private MultipartFile multipartFile;
 
     private MovieService movieService;
@@ -102,11 +113,14 @@ class MovieServiceTest {
                 directorRepository,
                 studioRepository,
                 genreRepository,
+                reviewRepository,
                 fileStorageService,
                 movieByIdCache,
                 movieSearchCache,
                 movieServiceProvider,
-                movieViewWriteBehindService);
+                movieViewWriteBehindService,
+                tmdbPosterService,
+                wikipediaPosterService);
     }
 
     @Test
@@ -126,11 +140,15 @@ class MovieServiceTest {
         when(movieByIdCache.get(1L)).thenReturn(null);
         Movie movie = movie(1L, "Interstellar");
         when(movieRepository.findByIdWithDetails(1L)).thenReturn(Optional.of(movie));
+        when(reviewRepository.summarizeRatingsByMovieIds(List.of(1L)))
+                .thenReturn(List.of(ratingSummary(1L, 8.25, 4L)));
 
         MovieResponseDto result = movieService.getById(1L);
 
         assertEquals(1L, result.getId());
         assertEquals("Interstellar", result.getTitle());
+        assertEquals(8.3, result.getAverageRating());
+        assertEquals(4L, result.getReviewCount());
         verify(movieByIdCache).put(eq(1L), any(MovieResponseDto.class));
     }
 
@@ -204,12 +222,16 @@ class MovieServiceTest {
         Page<MovieRepository.MovieSearchRowProjection> repoPage = new PageImpl<>(nn(List.of(row)));
         when(movieRepository.searchAdvancedJpql(anyString(), anyString(), anyString(), anyString(), any(Pageable.class)))
                 .thenReturn(repoPage);
+        when(reviewRepository.summarizeRatingsByMovieIds(List.of(7L)))
+                .thenReturn(List.of(ratingSummary(7L, 9.0, 12L)));
 
         Page<MovieResponseDto> result = movieService.searchAdvanced(params);
 
         assertEquals(1, result.getContent().size());
         assertEquals("Interstellar", result.getContent().get(0).getTitle());
         assertEquals(105L, result.getContent().get(0).getViewCount());
+        assertEquals(9.0, result.getContent().get(0).getAverageRating());
+        assertEquals(12L, result.getContent().get(0).getReviewCount());
 
         ArgumentCaptor<MovieSearchKey> keyCaptor = ArgumentCaptor.forClass(MovieSearchKey.class);
         verify(movieSearchCache).get(keyCaptor.capture());
@@ -759,6 +781,63 @@ class MovieServiceTest {
     }
 
     @Test
+    void importPosterFromTmdb_shouldStorePosterAndInvalidateCaches() {
+        Movie movie = movie(17L, "Dune");
+        byte[] content = "poster".getBytes();
+        TmdbPosterService.DownloadedPoster downloadedPoster = new TmdbPosterService.DownloadedPoster(".jpg", content);
+        when(movieRepository.findById(17L)).thenReturn(Optional.of(movie));
+        when(tmdbPosterService.downloadPoster("/dune.jpg")).thenReturn(downloadedPoster);
+        when(fileStorageService.storeFile(any(InputStream.class), eq(".jpg"))).thenReturn("tmdb.jpg");
+
+        String result = movieService.importPosterFromTmdb(17L, "/dune.jpg");
+
+        assertEquals("/uploads/tmdb.jpg", result);
+        assertEquals("/uploads/tmdb.jpg", movie.getPosterUrl());
+        verify(movieRepository).save(movie);
+        verify(movieSearchCache).invalidate("MovieService.importPosterFromTmdb movieId=17");
+        verify(movieByIdCache).invalidate("MovieService.importPosterFromTmdb movieId=17");
+    }
+
+    @Test
+    void importPosterFromTmdb_shouldThrow_whenMovieMissing() {
+        when(movieRepository.findById(404L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> movieService.importPosterFromTmdb(404L, "/img.jpg"));
+
+        verifyNoInteractions(tmdbPosterService);
+    }
+
+    @Test
+    void scrapePosterFromWikipedia_shouldStorePosterAndInvalidateCaches() {
+        Movie movie = movie(18L, "Interstellar");
+        byte[] content = "wiki-poster".getBytes();
+        WikipediaPosterService.DownloadedPoster downloadedPoster =
+                new WikipediaPosterService.DownloadedPoster(".png", content);
+        when(movieRepository.findById(18L)).thenReturn(Optional.of(movie));
+        when(wikipediaPosterService.scrapePoster("Interstellar", 2014)).thenReturn(downloadedPoster);
+        when(fileStorageService.storeFile(any(InputStream.class), eq(".png"))).thenReturn("wiki.png");
+
+        String result = movieService.scrapePosterFromWikipedia(18L, "Interstellar", 2014);
+
+        assertEquals("/uploads/wiki.png", result);
+        assertEquals("/uploads/wiki.png", movie.getPosterUrl());
+        verify(movieRepository).save(movie);
+        verify(movieSearchCache).invalidate("MovieService.scrapePosterFromWikipedia movieId=18");
+        verify(movieByIdCache).invalidate("MovieService.scrapePosterFromWikipedia movieId=18");
+    }
+
+    @Test
+    void scrapePosterFromWikipedia_shouldThrow_whenMovieMissing() {
+        when(movieRepository.findById(505L)).thenReturn(Optional.empty());
+
+        assertThrows(
+                ResourceNotFoundException.class,
+                () -> movieService.scrapePosterFromWikipedia(505L, "Avatar", 2009));
+
+        verifyNoInteractions(wikipediaPosterService);
+    }
+
+    @Test
     void getAllPaged_shouldDelegateToProxiedSearchMethod() {
         MovieService spyService = spy(movieService);
         when(movieServiceProvider.getObject()).thenReturn(spyService);
@@ -1015,5 +1094,24 @@ class MovieServiceTest {
         when(row.getStudioId()).thenReturn(20L);
         when(row.getStudioTitle()).thenReturn("Warner Bros");
         return row;
+    }
+
+    private ReviewRepository.MovieRatingSummaryProjection ratingSummary(Long movieId, Double averageRating, Long reviewCount) {
+        return new ReviewRepository.MovieRatingSummaryProjection() {
+            @Override
+            public Long getMovieId() {
+                return movieId;
+            }
+
+            @Override
+            public Double getAverageRating() {
+                return averageRating;
+            }
+
+            @Override
+            public Long getReviewCount() {
+                return reviewCount;
+            }
+        };
     }
 }

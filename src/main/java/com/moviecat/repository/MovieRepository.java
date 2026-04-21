@@ -104,6 +104,13 @@ public interface MovieRepository extends JpaRepository<Movie, Long> {
             FROM movies m
             LEFT JOIN directors d ON d.id = m.director_id
             LEFT JOIN studios s ON s.id = m.studio_id
+            LEFT JOIN (
+                SELECT
+                    r.movie_id AS movie_id,
+                    AVG(r.rating) AS average_rating
+                FROM reviews r
+                GROUP BY r.movie_id
+            ) rating_stats ON rating_stats.movie_id = m.id
             WHERE (:title = '' OR LOWER(m.title) LIKE CONCAT('%', :title, '%'))
               AND (:directorLastName = '' OR LOWER(d.last_name) LIKE CONCAT('%', :directorLastName, '%'))
               AND (:studioTitle = '' OR LOWER(s.title) LIKE CONCAT('%', :studioTitle, '%'))
@@ -121,6 +128,14 @@ public interface MovieRepository extends JpaRepository<Movie, Long> {
               CASE WHEN :sortField = 'year' AND :sortDirection = 'desc' THEN m.release_year END DESC,
               CASE WHEN :sortField = 'viewCount' AND :sortDirection = 'asc' THEN m.view_count END ASC,
               CASE WHEN :sortField = 'viewCount' AND :sortDirection = 'desc' THEN m.view_count END DESC,
+              CASE WHEN :sortField = 'directorLastName' AND :sortDirection = 'asc' THEN d.last_name END ASC,
+              CASE WHEN :sortField = 'directorLastName' AND :sortDirection = 'desc' THEN d.last_name END DESC,
+              CASE WHEN :sortField = 'studioTitle' AND :sortDirection = 'asc' THEN s.title END ASC,
+              CASE WHEN :sortField = 'studioTitle' AND :sortDirection = 'desc' THEN s.title END DESC,
+              CASE WHEN :sortField = 'averageRating' AND :sortDirection = 'asc'
+                  THEN COALESCE(rating_stats.average_rating, -1) END ASC,
+              CASE WHEN :sortField = 'averageRating' AND :sortDirection = 'desc'
+                  THEN COALESCE(rating_stats.average_rating, -1) END DESC,
               CASE WHEN :sortField = 'id' AND :sortDirection = 'asc' THEN m.id END ASC,
               CASE WHEN :sortField = 'id' AND :sortDirection = 'desc' THEN m.id END DESC
             """,

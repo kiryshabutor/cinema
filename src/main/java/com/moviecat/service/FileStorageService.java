@@ -44,25 +44,47 @@ public class FileStorageService {
                 throw new IllegalArgumentException("Failed to store empty file.");
             }
 
-            String originalFilename = file.getOriginalFilename();
-            String extension = "";
-            if (originalFilename != null && originalFilename.contains(".")) {
-                extension = originalFilename.substring(originalFilename.lastIndexOf("."));
-            }
-
-            if (!isValidExtension(extension)) {
+            String extension = extractExtension(file.getOriginalFilename());
+            String normalizedExtension = normalizeExtension(extension);
+            if (!isValidExtension(normalizedExtension)) {
                 throw new IllegalArgumentException("Invalid file extension. Allowed extensions: " + ALLOWED_EXTENSIONS);
             }
-            
-            String filename = UUID.randomUUID().toString() + extension;
-            Path destinationFile = this.uploadDir.resolve(filename).normalize().toAbsolutePath();
-            
             try (InputStream inputStream = file.getInputStream()) {
-                Files.copy(inputStream, destinationFile, StandardCopyOption.REPLACE_EXISTING);
+                return storeFile(inputStream, normalizedExtension);
             }
-            return filename;
         } catch (IOException e) {
             throw new UncheckedIOException("Failed to store file.", e);
         }
+    }
+
+    public String storeFile(InputStream inputStream, String extension) {
+        Objects.requireNonNull(inputStream, "inputStream");
+        String normalizedExtension = normalizeExtension(extension);
+        if (!isValidExtension(normalizedExtension)) {
+            throw new IllegalArgumentException("Invalid file extension. Allowed extensions: " + ALLOWED_EXTENSIONS);
+        }
+
+        String filename = UUID.randomUUID() + normalizedExtension;
+        Path destinationFile = this.uploadDir.resolve(filename).normalize().toAbsolutePath();
+        try {
+            Files.copy(inputStream, destinationFile, StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException e) {
+            throw new UncheckedIOException("Failed to store file.", e);
+        }
+        return filename;
+    }
+
+    private String extractExtension(String originalFilename) {
+        if (originalFilename == null || !originalFilename.contains(".")) {
+            return "";
+        }
+        return originalFilename.substring(originalFilename.lastIndexOf("."));
+    }
+
+    private String normalizeExtension(String extension) {
+        if (extension == null) {
+            return "";
+        }
+        return extension.trim().toLowerCase();
     }
 }

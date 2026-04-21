@@ -7,6 +7,9 @@ import com.moviecat.model.Movie;
 import com.moviecat.model.Review;
 import com.moviecat.repository.MovieRepository;
 import com.moviecat.repository.ReviewRepository;
+import com.moviecat.service.cache.MovieByIdCache;
+import com.moviecat.service.cache.MovieSearchCache;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +34,8 @@ public class ReviewService {
 
     private final ReviewRepository reviewRepository;
     private final MovieRepository movieRepository;
+    private final MovieByIdCache movieByIdCache;
+    private final MovieSearchCache movieSearchCache;
 
     @Transactional(readOnly = true)
     public Page<ReviewDto> getAll(int page, int size, String sort, String direction) {
@@ -79,7 +84,15 @@ public class ReviewService {
         review.setMovie(movie);
 
         Review savedReview = reviewRepository.save(review);
+        invalidateMovieCaches(movieId);
         return ReviewMapper.toDto(savedReview);
+    }
+
+    private void invalidateMovieCaches(Long movieId) {
+        Long safeMovieId = Objects.requireNonNull(movieId, MOVIE_ID_REQUIRED_MSG);
+        String reason = "ReviewService.create movieId=" + safeMovieId;
+        movieSearchCache.invalidate(reason);
+        movieByIdCache.evictAll(List.of(safeMovieId), reason);
     }
 
     private Movie findMovieById(Long movieId) {

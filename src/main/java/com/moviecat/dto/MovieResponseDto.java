@@ -41,6 +41,11 @@ public class MovieResponseDto {
     @Schema(description = "Studio title", example = "Warner Bros")
     private String studioTitle;
 
+    @Schema(description = "Average rating based on reviews", example = "8.7")
+    private Double averageRating;
+    @Schema(description = "Total number of reviews", example = "14", requiredMode = Schema.RequiredMode.REQUIRED)
+    private Long reviewCount;
+
     @Schema(description = "Movie genres")
     private List<GenreItemDto> genres;
 }

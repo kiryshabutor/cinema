@@ -8,9 +8,12 @@ import com.moviecat.model.Movie;
 import com.moviecat.model.Review;
 import com.moviecat.repository.MovieRepository;
 import com.moviecat.repository.ReviewRepository;
+import com.moviecat.service.cache.MovieByIdCache;
+import com.moviecat.service.cache.MovieSearchCache;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -26,6 +29,8 @@ public class ReviewBulkProcessingService {
 
     private final ReviewRepository reviewRepository;
     private final MovieRepository movieRepository;
+    private final MovieByIdCache movieByIdCache;
+    private final MovieSearchCache movieSearchCache;
 
     @Transactional
     public void createBulkTransactional(
@@ -38,6 +43,7 @@ public class ReviewBulkProcessingService {
         List<ReviewCreateItemDto> safeItems = Optional.ofNullable(reviewItems).orElseGet(List::of);
         Runnable safeProcessedCallback = onReviewProcessed != null ? onReviewProcessed : () -> {
         };
+        boolean hasChanges = false;
 
         for (int i = 0; i < safeItems.size(); i++) {
             sleepSeconds(itemDelaySec);
@@ -50,8 +56,20 @@ public class ReviewBulkProcessingService {
             review.setId(null);
             review.setMovie(movie);
             reviewRepository.save(review);
+            hasChanges = true;
             safeProcessedCallback.run();
         }
+
+        if (hasChanges) {
+            invalidateMovieCaches(movie.getId());
+        }
+    }
+
+    private void invalidateMovieCaches(Long movieId) {
+        Long safeMovieId = Objects.requireNonNull(movieId, MOVIE_ID_REQUIRED_MSG);
+        String reason = "ReviewBulkProcessingService.createBulkTransactional movieId=" + safeMovieId;
+        movieSearchCache.invalidate(reason);
+        movieByIdCache.evictAll(Set.of(safeMovieId), reason);
     }
 
     private Movie findMovieById(Long movieId) {

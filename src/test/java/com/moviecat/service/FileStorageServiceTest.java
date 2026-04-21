@@ -96,4 +96,27 @@ class FileStorageServiceTest {
 
         assertThrows(UncheckedIOException.class, () -> service.storeFile(file));
     }
+
+    @Test
+    void storeFileFromStream_shouldSaveFileWithAllowedExtension() throws IOException {
+        Path uploadDir = Files.createTempDirectory("moviecat-upload-stream-dir");
+        FileStorageService service = new FileStorageService(uploadDir);
+
+        String storedFilename = service.storeFile(
+                new ByteArrayInputStream("img".getBytes(StandardCharsets.UTF_8)),
+                ".png");
+
+        assertTrue(storedFilename.endsWith(".png"));
+        assertTrue(Files.exists(uploadDir.resolve(storedFilename)));
+    }
+
+    @Test
+    void storeFileFromStream_shouldThrowForInvalidExtension() throws IOException {
+        Path uploadDir = Files.createTempDirectory("moviecat-upload-stream-dir");
+        FileStorageService service = new FileStorageService(uploadDir);
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> service.storeFile(new ByteArrayInputStream("img".getBytes(StandardCharsets.UTF_8)), ".txt"));
+    }
 }

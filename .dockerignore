@@ -10,3 +10,5 @@ uploads
 *.iml
 *.docx
 .~lock.*
+frontend/node_modules
+frontend/dist

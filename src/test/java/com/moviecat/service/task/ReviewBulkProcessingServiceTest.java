@@ -13,6 +13,8 @@ import com.moviecat.exception.SimulatedFailureException;
 import com.moviecat.model.Movie;
 import com.moviecat.repository.MovieRepository;
 import com.moviecat.repository.ReviewRepository;
+import com.moviecat.service.cache.MovieByIdCache;
+import com.moviecat.service.cache.MovieSearchCache;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -31,11 +33,18 @@ class ReviewBulkProcessingServiceTest {
     @Mock
     private MovieRepository movieRepository;
 
+    @Mock
+    private MovieByIdCache movieByIdCache;
+
+    @Mock
+    private MovieSearchCache movieSearchCache;
+
     private ReviewBulkProcessingService reviewBulkProcessingService;
 
     @BeforeEach
     void setUp() {
-        reviewBulkProcessingService = new ReviewBulkProcessingService(reviewRepository, movieRepository);
+        reviewBulkProcessingService =
+                new ReviewBulkProcessingService(reviewRepository, movieRepository, movieByIdCache, movieSearchCache);
     }
 
     @Test
@@ -56,6 +65,11 @@ class ReviewBulkProcessingServiceTest {
                 .count();
         assertEquals(2, saveCalls);
         assertEquals(2, processedCounter.get());
+        org.mockito.Mockito.verify(movieSearchCache)
+                .invalidate("ReviewBulkProcessingService.createBulkTransactional movieId=7");
+        org.mockito.Mockito.verify(movieByIdCache).evictAll(
+                java.util.Set.of(7L),
+                "ReviewBulkProcessingService.createBulkTransactional movieId=7");
     }
 
     @Test
@@ -83,6 +97,7 @@ class ReviewBulkProcessingServiceTest {
                 .count();
         assertEquals(1, saveCalls);
         assertEquals(1, processedCounter.get());
+        verifyNoInteractions(movieSearchCache, movieByIdCache);
     }
 
     @Test
@@ -107,7 +122,7 @@ class ReviewBulkProcessingServiceTest {
 
         assertDoesNotThrow(() -> reviewBulkProcessingService.createBulkTransactional(7L, null, false, 0, null));
 
-        verifyNoInteractions(reviewRepository);
+        verifyNoInteractions(reviewRepository, movieSearchCache, movieByIdCache);
     }
 
     @Test
@@ -123,6 +138,11 @@ class ReviewBulkProcessingServiceTest {
                 .filter(invocation -> invocation.getMethod().getName().equals("save"))
                 .count();
         assertEquals(1, saveCalls);
+        org.mockito.Mockito.verify(movieSearchCache)
+                .invalidate("ReviewBulkProcessingService.createBulkTransactional movieId=7");
+        org.mockito.Mockito.verify(movieByIdCache).evictAll(
+                java.util.Set.of(7L),
+                "ReviewBulkProcessingService.createBulkTransactional movieId=7");
     }
 
     @Test
@@ -133,7 +153,7 @@ class ReviewBulkProcessingServiceTest {
                 () -> reviewBulkProcessingService.createBulkTransactional(null, emptyItems, false, 0, null));
 
         assertEquals("Movie ID is required", exception.getMessage());
-        verifyNoInteractions(movieRepository, reviewRepository);
+        verifyNoInteractions(movieRepository, reviewRepository, movieSearchCache, movieByIdCache);
     }
 
     @Test
@@ -150,7 +170,7 @@ class ReviewBulkProcessingServiceTest {
                     () -> reviewBulkProcessingService.createBulkTransactional(7L, items, false, 1, null));
 
             assertEquals("Bulk processing was interrupted", exception.getMessage());
-            verifyNoInteractions(reviewRepository);
+            verifyNoInteractions(reviewRepository, movieSearchCache, movieByIdCache);
         } finally {
             Thread.interrupted();
         }

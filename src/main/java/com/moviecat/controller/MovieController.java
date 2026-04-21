@@ -5,6 +5,8 @@ import com.moviecat.dto.MoviePatchDto;
 import com.moviecat.dto.MovieResponseDto;
 import com.moviecat.dto.MovieSearchParams;
 import com.moviecat.dto.MovieUpdateDto;
+import com.moviecat.dto.PosterImportRequestDto;
+import com.moviecat.dto.PosterScrapeRequestDto;
 import com.moviecat.dto.ReviewCreateItemDto;
 import com.moviecat.dto.TaskStartResponseDto;
 import com.moviecat.dto.ViewCountResponseDto;
@@ -225,6 +227,24 @@ public class MovieController {
             @Parameter(description = "Image file (jpg/jpeg/png/webp/gif)")
             @RequestParam("file") MultipartFile file) {
         String fileUrl = movieService.uploadPoster(id, file);
+        return ResponseEntity.ok(Collections.singletonMap("url", fileUrl));
+    }
+
+    @PostMapping("/{id}/poster/import")
+    @Operation(summary = "Import movie poster from TMDB by poster path")
+    public ResponseEntity<Map<String, String>> importPoster(
+            @PathVariable @Positive long id,
+            @Valid @RequestBody PosterImportRequestDto dto) {
+        String fileUrl = movieService.importPosterFromTmdb(id, dto.getPosterPath());
+        return ResponseEntity.ok(Collections.singletonMap("url", fileUrl));
+    }
+
+    @PostMapping("/{id}/poster/scrape")
+    @Operation(summary = "Scrape movie poster via Wikipedia API by query and year")
+    public ResponseEntity<Map<String, String>> scrapePoster(
+            @PathVariable @Positive long id,
+            @Valid @RequestBody PosterScrapeRequestDto dto) {
+        String fileUrl = movieService.scrapePosterFromWikipedia(id, dto.getQuery(), dto.getYear());
         return ResponseEntity.ok(Collections.singletonMap("url", fileUrl));
     }
 }

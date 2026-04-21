@@ -296,6 +296,72 @@
 
 Статическая раздача: `/uploads/**`.
 
+### 13) Импортировать постер из TMDB
+
+`POST /api/movies/{id}/poster/import`
+
+**Request (PosterImportRequestDto):**
+
+```json
+{ "posterPath": "/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg" }
+```
+
+**Response (200 OK):**
+
+```json
+{ "url": "/uploads/<uuid>.<ext>" }
+```
+
+### 14) Найти постер через Wikipedia API и сохранить
+
+`POST /api/movies/{id}/poster/scrape`
+
+**Request (PosterScrapeRequestDto):**
+
+```json
+{
+  "query": "Interstellar",
+  "year": 2014
+}
+```
+
+`year` опционален.
+
+**Response (200 OK):**
+
+```json
+{ "url": "/uploads/<uuid>.<ext>" }
+```
+
+---
+
+## Posters
+
+### 1) Поиск постеров в TMDB
+
+`GET /api/posters/tmdb/search?query=interstellar&year=2014`
+
+Параметры:
+
+- `query`: required, строка поиска
+- `year`: optional, фильтр по году
+
+**Response (200 OK):** `List<TmdbPosterCandidateDto>`
+
+Пример:
+
+```json
+[
+  {
+    "tmdbId": 157336,
+    "title": "Interstellar",
+    "releaseYear": 2014,
+    "posterPath": "/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg",
+    "previewUrl": "https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg"
+  }
+]
+```
+
 ### MovieResponseDto (пример)
 
 ```json
@@ -568,6 +634,23 @@
 
 - `id`: `Long`
 - `name`: `String`
+
+### PosterImportRequestDto
+
+- `posterPath`: required, must start with `/`
+
+### TmdbPosterCandidateDto
+
+- `tmdbId`: `Long`
+- `title`: `String`
+- `releaseYear`: `Integer`
+- `posterPath`: `String`
+- `previewUrl`: `String`
+
+### PosterScrapeRequestDto
+
+- `query`: required, not blank
+- `year`: optional, `1888..2100`
 
 ### ReviewDto
 
