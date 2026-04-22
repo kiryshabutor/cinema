@@ -7,7 +7,7 @@ services:
     autoDeploy: true
     healthCheckPath: /healthz
     envVars:
-      - key: SPRING_DATASOURCE_URL
+      - key: RENDER_DATABASE_URL
         fromDatabase:
           name: moviecat-db
           property: connectionString
