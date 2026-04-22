@@ -23,7 +23,9 @@ public class RenderDatabaseUrlEnvironmentPostProcessor implements EnvironmentPos
         if (configuredUrl != null && configuredUrl.startsWith(POSTGRES_SCHEME)) {
             environment.getPropertySources().addFirst(new MapPropertySource(
                     PROPERTY_SOURCE_NAME,
-                    Map.of(DATASOURCE_URL_KEY, JDBC_POSTGRES_SCHEME + configuredUrl.substring(POSTGRES_SCHEME.length()))));
+                    Map.of(
+                            DATASOURCE_URL_KEY,
+                            JDBC_POSTGRES_SCHEME + configuredUrl.substring(POSTGRES_SCHEME.length()))));
             return;
         }
 
