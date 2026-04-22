@@ -1,6 +1,7 @@
 package com.moviecat.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
@@ -222,5 +223,20 @@ class WikipediaPosterServiceTest {
     @Test
     void scrapePoster_shouldThrowForBlankQuery() {
         assertThrows(IllegalArgumentException.class, () -> wikipediaPosterService.scrapePoster("  ", 2014));
+    }
+
+    @Test
+    void downloadedPoster_shouldCompareByteArrayByContent() {
+        WikipediaPosterService.DownloadedPoster left =
+                new WikipediaPosterService.DownloadedPoster(".png", "img".getBytes(StandardCharsets.UTF_8));
+        WikipediaPosterService.DownloadedPoster right =
+                new WikipediaPosterService.DownloadedPoster(".png", "img".getBytes(StandardCharsets.UTF_8));
+        WikipediaPosterService.DownloadedPoster different =
+                new WikipediaPosterService.DownloadedPoster(".png", "other".getBytes(StandardCharsets.UTF_8));
+
+        assertEquals(left, right);
+        assertEquals(left.hashCode(), right.hashCode());
+        assertNotEquals(left, different);
+        assertEquals("DownloadedPoster[extension=.png, content=[105, 109, 103]]", left.toString());
     }
 }

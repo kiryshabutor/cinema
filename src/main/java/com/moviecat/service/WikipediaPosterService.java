@@ -5,6 +5,7 @@ import com.moviecat.exception.ExternalServiceException;
 import com.moviecat.exception.ResourceNotFoundException;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -312,6 +313,27 @@ public class WikipediaPosterService {
         public DownloadedPoster {
             Objects.requireNonNull(extension, "extension");
             Objects.requireNonNull(content, "content");
+        }
+
+        @Override
+        public boolean equals(Object other) {
+            if (this == other) {
+                return true;
+            }
+            if (!(other instanceof DownloadedPoster that)) {
+                return false;
+            }
+            return extension.equals(that.extension) && Arrays.equals(content, that.content);
+        }
+
+        @Override
+        public int hashCode() {
+            return 31 * extension.hashCode() + Arrays.hashCode(content);
+        }
+
+        @Override
+        public String toString() {
+            return "DownloadedPoster[extension=" + extension + ", content=" + Arrays.toString(content) + "]";
         }
     }
 }

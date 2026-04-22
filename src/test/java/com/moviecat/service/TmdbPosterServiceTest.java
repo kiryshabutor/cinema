@@ -1,6 +1,7 @@
 package com.moviecat.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.queryParam;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
@@ -110,5 +111,20 @@ class TmdbPosterServiceTest {
     @Test
     void downloadPoster_shouldThrowWhenPathIsInvalid() {
         assertThrows(IllegalArgumentException.class, () -> tmdbPosterService.downloadPoster("poster.jpg"));
+    }
+
+    @Test
+    void downloadedPoster_shouldCompareByteArrayByContent() {
+        TmdbPosterService.DownloadedPoster left =
+                new TmdbPosterService.DownloadedPoster(".jpg", "img".getBytes(StandardCharsets.UTF_8));
+        TmdbPosterService.DownloadedPoster right =
+                new TmdbPosterService.DownloadedPoster(".jpg", "img".getBytes(StandardCharsets.UTF_8));
+        TmdbPosterService.DownloadedPoster different =
+                new TmdbPosterService.DownloadedPoster(".jpg", "other".getBytes(StandardCharsets.UTF_8));
+
+        assertEquals(left, right);
+        assertEquals(left.hashCode(), right.hashCode());
+        assertNotEquals(left, different);
+        assertEquals("DownloadedPoster[extension=.jpg, content=[105, 109, 103]]", left.toString());
     }
 }
