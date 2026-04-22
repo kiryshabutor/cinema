@@ -21,20 +21,6 @@ services:
         condition: service_healthy
     restart: on-failure
 
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: moviecat-frontend
-    ports:
-      - "3000:80"
-    environment:
-      BACKEND_URL: http://app:8080
-    depends_on:
-      app:
-        condition: service_started
-    restart: on-failure
-
   postgres:
     image: postgres:16
     container_name: moviecat-db

@@ -6,44 +6,22 @@ on:
       - main
       - master
   pull_request:
+    branches:
+      - main
+      - master
   workflow_dispatch:
 
 jobs:
-  frontend-build:
-    name: Frontend Build
-    uses: ./.github/workflows/build.yaml
-
   lint:
-    name: Lint
-    needs:
-      - frontend-build
     uses: ./.github/workflows/lint.yaml
 
-  backend-build-test:
-    name: Backend Build & Test
+  test:
     needs:
       - lint
     uses: ./.github/workflows/test.yaml
 
-  docker-build:
-    name: Docker Build
+  build:
     needs:
-      - frontend-build
-      - backend-build-test
-    if: github.event_name == 'push'
-    uses: ./.github/workflows/push.yaml
-
-  deploy:
-    name: Deploy To Render
-    needs:
-      - docker-build
-    if: github.event_name == 'push'
-    uses: ./.github/workflows/deploy.yaml
-    secrets: inherit
-
-  health-check:
-    name: Health Check
-    needs:
-      - deploy
-    if: github.event_name == 'push'
-    uses: ./.github/workflows/health.yaml
+      - lint
+      - test
+    uses: ./.github/workflows/build.yaml

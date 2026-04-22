@@ -1,25 +1,24 @@
 name: Render Health Check
 
 on:
-  workflow_call:
-  workflow_dispatch:
   schedule:
     - cron: "*/30 * * * *"
+  workflow_dispatch:
 
 jobs:
-  frontend-healthcheck:
+  health:
     runs-on: ubuntu-latest
     permissions:
       contents: read
 
     env:
-      RENDER_FRONTEND_HEALTHCHECK_URL: ${{ vars.RENDER_FRONTEND_HEALTHCHECK_URL }}
+      RENDER_HEALTHCHECK_URL: ${{ vars.RENDER_HEALTHCHECK_URL }}
 
     steps:
-      - name: Check frontend health
+      - name: Check deployed service health
         run: |
-          if [ -z "${RENDER_FRONTEND_HEALTHCHECK_URL}" ]; then
-            echo "::warning::RENDER_FRONTEND_HEALTHCHECK_URL repository variable is not set. Skipping health check."
+          if [ -z "${RENDER_HEALTHCHECK_URL}" ]; then
+            echo "::warning::RENDER_HEALTHCHECK_URL repository variable is not set. Skipping health check."
             exit 0
           fi
 
@@ -32,35 +31,6 @@ jobs:
             --retry-delay 10 \
             --retry-connrefused \
             --max-time 180 \
-            "${RENDER_FRONTEND_HEALTHCHECK_URL}"
+            "${RENDER_HEALTHCHECK_URL}"
 
-          echo "Render frontend is healthy."
-
-  backend-healthcheck:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-
-    env:
-      RENDER_BACKEND_HEALTHCHECK_URL: ${{ vars.RENDER_BACKEND_HEALTHCHECK_URL }}
-
-    steps:
-      - name: Check backend health
-        run: |
-          if [ -z "${RENDER_BACKEND_HEALTHCHECK_URL}" ]; then
-            echo "::warning::RENDER_BACKEND_HEALTHCHECK_URL repository variable is not set. Skipping health check."
-            exit 0
-          fi
-
-          curl \
-            --fail \
-            --silent \
-            --show-error \
-            --location \
-            --retry 12 \
-            --retry-delay 10 \
-            --retry-connrefused \
-            --max-time 180 \
-            "${RENDER_BACKEND_HEALTHCHECK_URL}"
-
-          echo "Render backend is healthy."
+          echo "Render service is healthy."
