@@ -1,3 +1,6 @@
+# syntax=docker/dockerfile:1.7
+
+# Frontend build stage
 FROM node:20-alpine AS frontend-build
 WORKDIR /frontend
 
@@ -8,6 +11,7 @@ RUN --mount=type=cache,target=/root/.npm \
 COPY frontend ./
 RUN npm run build
 
+# Build stage
 FROM maven:3.9-eclipse-temurin-17 AS build
 WORKDIR /app
 

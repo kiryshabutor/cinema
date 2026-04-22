@@ -1,10 +1,6 @@
-name: CI/CD
+name: Pull Request Pipeline
 
 on:
-  push:
-    branches:
-      - main
-      - master
   pull_request:
     branches:
       - main
@@ -16,8 +12,6 @@ jobs:
     uses: ./.github/workflows/lint.yaml
 
   test:
-    needs:
-      - lint
     uses: ./.github/workflows/test.yaml
 
   build:

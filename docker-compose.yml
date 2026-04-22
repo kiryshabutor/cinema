@@ -1,13 +1,9 @@
 services:
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    build: .
     container_name: moviecat-app
     ports:
       - "8080:8080"
-    env_file:
-      - .env
     volumes:
       - ./uploads:/app/uploads
       - ./logs:/app/logs
@@ -17,8 +13,7 @@ services:
       DB_PASSWORD: moviecat
       TMDB_API_KEY: ${TMDB_API_KEY:-}
     depends_on:
-      postgres:
-        condition: service_healthy
+      - postgres
     restart: on-failure
 
   postgres:
@@ -32,11 +27,6 @@ services:
       POSTGRES_PASSWORD: moviecat
     volumes:
       - moviecat-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U moviecat -d moviecat_db"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
       
 volumes:
   moviecat-data:
