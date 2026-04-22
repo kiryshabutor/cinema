@@ -1,21 +1,49 @@
-name: Pull Request Pipeline
+name: CI/CD
 
 on:
-  pull_request:
+  push:
     branches:
       - main
       - master
+  pull_request:
   workflow_dispatch:
 
 jobs:
+  frontend-build:
+    name: Frontend Build
+    uses: ./.github/workflows/build.yaml
+
   lint:
+    name: Lint
+    needs:
+      - frontend-build
     uses: ./.github/workflows/lint.yaml
 
-  test:
-    uses: ./.github/workflows/test.yaml
-
-  build:
+  backend-build-test:
+    name: Backend Build & Test
     needs:
       - lint
-      - test
-    uses: ./.github/workflows/build.yaml
+    uses: ./.github/workflows/test.yaml
+
+  docker-build:
+    name: Docker Build
+    needs:
+      - frontend-build
+      - backend-build-test
+    if: github.event_name == 'push'
+    uses: ./.github/workflows/push.yaml
+
+  deploy:
+    name: Deploy To Render
+    needs:
+      - docker-build
+    if: github.event_name == 'push'
+    uses: ./.github/workflows/deploy.yaml
+    secrets: inherit
+
+  health-check:
+    name: Health Check
+    needs:
+      - deploy
+    if: github.event_name == 'push'
+    uses: ./.github/workflows/health.yaml

@@ -6,7 +6,7 @@ import GenresPage from '../pages/GenresPage.vue';
 import StudiosPage from '../pages/StudiosPage.vue';
 
 const router = createRouter({
-  history: createWebHashHistory('/app/'),
+  history: createWebHashHistory('/'),
   routes: [
     { path: '/', redirect: '/movies' },
     { path: '/movies', component: MoviesPage },

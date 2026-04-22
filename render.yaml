@@ -21,6 +21,20 @@ services:
           property: password
       - key: TMDB_API_KEY
         sync: false
+  - type: web
+    name: moviecat-frontend
+    runtime: docker
+    plan: free
+    dockerContext: ./frontend
+    dockerfilePath: ./frontend/Dockerfile
+    autoDeploy: true
+    healthCheckPath: /
+    envVars:
+      - key: BACKEND_URL
+        fromService:
+          name: moviecat-app
+          type: web
+          property: hostport
 
 databases:
   - name: moviecat-db

@@ -6,13 +6,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 @Controller
 public class SpaController {
 
-    @GetMapping({"/app", "/app/"})
-    public String forwardToSpaIndex() {
-        return "forward:/app/index.html";
-    }
-
     @GetMapping("/")
-    public String redirectRootToSpa() {
-        return "redirect:/app/";
+    public String redirectRootToSwagger() {
+        return "redirect:/swagger-ui.html";
     }
 }
