@@ -8,6 +8,7 @@ import lombok.Getter;
 public class MovieSearchParams {
     private final String title;
     private final String directorLastName;
+    private final String directorFirstName;
     private final String genreName;
     private final String studioTitle;
     private final int page;

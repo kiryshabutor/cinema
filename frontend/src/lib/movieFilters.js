@@ -9,6 +9,7 @@ export function readMovieFiltersFromQuery(query = {}) {
   return {
     title: normalizeFilterValue(query.title),
     directorLastName: normalizeFilterValue(query.directorLastName),
+    directorFirstName: normalizeFilterValue(query.directorFirstName),
     genreName: normalizeFilterValue(query.genreName),
     studioTitle: normalizeFilterValue(query.studioTitle)
   };
@@ -36,7 +37,8 @@ export function moviesRouteLocation(filters = {}) {
 
 export function directorMovieFilters(source = {}) {
   return {
-    directorLastName: source.directorLastName || source.lastName || ''
+    directorLastName: source.directorLastName || source.lastName || '',
+    directorFirstName: source.directorFirstName || source.firstName || ''
   };
 }
 

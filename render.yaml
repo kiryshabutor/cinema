@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: moviecat-app
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    autoDeploy: true
+    healthCheckPath: /healthz
+    envVars:
+      - key: SPRING_DATASOURCE_URL
+        fromDatabase:
+          name: moviecat-db
+          property: connectionString
+      - key: SPRING_DATASOURCE_USERNAME
+        fromDatabase:
+          name: moviecat-db
+          property: user
+      - key: SPRING_DATASOURCE_PASSWORD
+        fromDatabase:
+          name: moviecat-db
+          property: password
+      - key: TMDB_API_KEY
+        sync: false
+
+databases:
+  - name: moviecat-db
+    plan: free
+    databaseName: moviecat_db
+    postgresMajorVersion: "16"

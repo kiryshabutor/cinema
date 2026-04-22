@@ -202,6 +202,46 @@ mvn -q -DskipTests checkstyle:check
 docker logs -f moviecat-app
 ```
 
+## Deploy на Render
+
+В репозитории добавлен Blueprint-файл:
+
+- `render.yaml`
+
+При создании Blueprint в Render укажи:
+
+- `Blueprint Path`: `render.yaml`
+
+Что создает Blueprint:
+
+- web service `moviecat-app` через существующий `Dockerfile`
+- Postgres `moviecat-db`
+
+Что важно:
+
+- health check path: `/healthz`
+- `TMDB_API_KEY` помечен как `sync: false`, Render попросит ввести его при первом создании Blueprint
+- приложение читает `PORT`, `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`
+
+GitHub Actions для Render и CI:
+
+- `.github/workflows/build.yaml`
+- `.github/workflows/lint.yaml`
+- `.github/workflows/test.yaml`
+- `.github/workflows/pipeline.yaml`
+- `.github/workflows/push.yaml`
+- `.github/workflows/deploy.yaml`
+- `.github/workflows/health.yaml`
+
+Для optional workflow-файлов добавь в GitHub:
+
+- secret `RENDER_DEPLOY_HOOK_URL` для ручного запуска деплоя из `deploy.yaml`
+- variable `RENDER_HEALTHCHECK_URL` со значением вида `https://<your-service>.onrender.com/healthz`
+
+Ограничение free-плана Render:
+
+- локальные файлы в `uploads/` на web service не персистентны и могут пропадать после redeploy/restart
+
 ## Краткая карта API
 
 ### Movies

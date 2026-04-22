@@ -58,6 +58,7 @@ public interface MovieRepository extends JpaRepository<Movie, Long> {
             LEFT JOIN m.studio s
             WHERE (:title = '' OR LOWER(m.title) LIKE CONCAT('%', :title, '%'))
               AND (:directorLastName = '' OR LOWER(d.lastName) LIKE CONCAT('%', :directorLastName, '%'))
+              AND (:directorFirstName = '' OR LOWER(d.firstName) LIKE CONCAT('%', :directorFirstName, '%'))
               AND (:studioTitle = '' OR LOWER(s.title) LIKE CONCAT('%', :studioTitle, '%'))
               AND (:genreName = '' OR EXISTS (
                      SELECT 1
@@ -72,6 +73,7 @@ public interface MovieRepository extends JpaRepository<Movie, Long> {
             LEFT JOIN m.studio s
             WHERE (:title = '' OR LOWER(m.title) LIKE CONCAT('%', :title, '%'))
               AND (:directorLastName = '' OR LOWER(d.lastName) LIKE CONCAT('%', :directorLastName, '%'))
+              AND (:directorFirstName = '' OR LOWER(d.firstName) LIKE CONCAT('%', :directorFirstName, '%'))
               AND (:studioTitle = '' OR LOWER(s.title) LIKE CONCAT('%', :studioTitle, '%'))
               AND (:genreName = '' OR EXISTS (
                      SELECT 1
@@ -82,6 +84,7 @@ public interface MovieRepository extends JpaRepository<Movie, Long> {
     Page<MovieSearchRowProjection> searchAdvancedJpql(
             @Param("title") String title,
             @Param("directorLastName") String directorLastName,
+            @Param("directorFirstName") String directorFirstName,
             @Param("genreName") String genreName,
             @Param("studioTitle") String studioTitle,
             Pageable pageable);
@@ -113,6 +116,7 @@ public interface MovieRepository extends JpaRepository<Movie, Long> {
             ) rating_stats ON rating_stats.movie_id = m.id
             WHERE (:title = '' OR LOWER(m.title) LIKE CONCAT('%', :title, '%'))
               AND (:directorLastName = '' OR LOWER(d.last_name) LIKE CONCAT('%', :directorLastName, '%'))
+              AND (:directorFirstName = '' OR LOWER(d.first_name) LIKE CONCAT('%', :directorFirstName, '%'))
               AND (:studioTitle = '' OR LOWER(s.title) LIKE CONCAT('%', :studioTitle, '%'))
               AND (:genreName = '' OR EXISTS (
                      SELECT 1
@@ -146,6 +150,7 @@ public interface MovieRepository extends JpaRepository<Movie, Long> {
             LEFT JOIN studios s ON s.id = m.studio_id
             WHERE (:title = '' OR LOWER(m.title) LIKE CONCAT('%', :title, '%'))
               AND (:directorLastName = '' OR LOWER(d.last_name) LIKE CONCAT('%', :directorLastName, '%'))
+              AND (:directorFirstName = '' OR LOWER(d.first_name) LIKE CONCAT('%', :directorFirstName, '%'))
               AND (:studioTitle = '' OR LOWER(s.title) LIKE CONCAT('%', :studioTitle, '%'))
               AND (:genreName = '' OR EXISTS (
                      SELECT 1
@@ -159,6 +164,7 @@ public interface MovieRepository extends JpaRepository<Movie, Long> {
     Page<MovieSearchRowProjection> searchAdvancedNative(
             @Param("title") String title,
             @Param("directorLastName") String directorLastName,
+            @Param("directorFirstName") String directorFirstName,
             @Param("genreName") String genreName,
             @Param("studioTitle") String studioTitle,
             @Param("sortField") String sortField,

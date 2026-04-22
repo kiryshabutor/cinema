@@ -4,39 +4,32 @@
       <div>
         <h2>Directors</h2>
       </div>
-      <button class="btn-primary" type="button" @click="openCreate">Create director</button>
-    </div>
+      <div class="page-head-actions">
+        <div class="list-toolbar page-head-toolbar">
+          <div class="list-toolbar-summary">
+            <span class="list-toolbar-label">Sort by</span>
+            <strong>{{ currentSortLabel }}</strong>
+          </div>
 
-    <div class="list-toolbar">
-      <div class="list-toolbar-summary">
-        <span class="list-toolbar-label">Sort by</span>
-        <strong>{{ currentSortLabel }}</strong>
-      </div>
+          <div class="field list-toolbar-field">
+            <label for="directors-size">Page size</label>
+            <SuggestInput
+              id="directors-size"
+              v-model="sizeInput"
+              :suggestions="sizeSuggestions"
+              placeholder="10"
+              @blur="applyTableSettings"
+            />
+          </div>
+        </div>
 
-      <div class="field list-toolbar-field">
-        <label for="directors-direction">Direction</label>
-        <SuggestInput
-          id="directors-direction"
-          v-model="directionInput"
-          :suggestions="directionSuggestions"
-          placeholder="asc"
-          @blur="applyTableSettings"
-        />
-      </div>
-
-      <div class="field list-toolbar-field">
-        <label for="directors-size">Page size</label>
-        <SuggestInput
-          id="directors-size"
-          v-model="sizeInput"
-          :suggestions="sizeSuggestions"
-          placeholder="10"
-          @blur="applyTableSettings"
-        />
+        <button class="btn-primary page-head-action-button" type="button" @click="openCreate">
+          Create director
+        </button>
       </div>
     </div>
 
-    <div class="table-wrap">
+    <div class="table-wrap table-wrap--responsive">
       <table class="table table--entity">
         <colgroup>
           <col class="table-col-id" />
@@ -96,24 +89,24 @@
         </thead>
         <tbody>
           <tr v-for="director in directors" :key="director.id">
-            <td class="table-cell-center">{{ director.id }}</td>
-            <td>
+            <td class="table-cell-center" data-label="ID">{{ director.id }}</td>
+            <td data-label="Last name">
               <RouterLink class="movie-filter-link" :to="directorMoviesLocation(director)">
                 {{ director.lastName }}
               </RouterLink>
             </td>
-            <td>
+            <td data-label="First name">
               <RouterLink class="movie-filter-link" :to="directorMoviesLocation(director)">
                 {{ director.firstName }}
               </RouterLink>
             </td>
-            <td>
+            <td data-label="Middle name">
               <RouterLink v-if="director.middleName" class="movie-filter-link" :to="directorMoviesLocation(director)">
                 {{ director.middleName }}
               </RouterLink>
               <span v-else>—</span>
             </td>
-            <td class="table-cell-actions">
+            <td class="table-cell-actions" data-label="Actions">
               <div class="table-actions table-actions--icon">
                 <button
                   class="icon-action-button"
@@ -144,8 +137,8 @@
               </div>
             </td>
           </tr>
-          <tr v-if="directors.length === 0 && !loading">
-            <td colspan="5">No directors found.</td>
+          <tr v-if="directors.length === 0 && !loading" class="table-empty-row">
+            <td class="table-empty" colspan="5">No directors found.</td>
           </tr>
         </tbody>
       </table>
@@ -209,7 +202,6 @@ const paging = reactive({
   totalElements: 0
 });
 
-const directionSuggestions = ['asc', 'desc'];
 const sizeSuggestions = ['5', '10', '20'];
 const directorSortLabels = {
   id: 'ID',
@@ -218,13 +210,6 @@ const directorSortLabels = {
   middleName: 'Middle name'
 };
 const currentSortLabel = computed(() => sortLabel(paging.sort, directorSortLabels));
-
-const directionInput = computed({
-  get: () => paging.direction,
-  set: (value) => {
-    paging.direction = `${value || ''}`.trim();
-  }
-});
 
 const sizeInput = computed({
   get: () => `${paging.size}`,

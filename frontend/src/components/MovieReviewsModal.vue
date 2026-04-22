@@ -31,6 +31,7 @@
 
     <ReviewFormModal
       v-model="reviewFormVisible"
+      :author-suggestions="authorSuggestions"
       :loading="reviewSaving"
       :error-message="reviewError"
       @submit="submitReview"
@@ -68,6 +69,22 @@ const paging = reactive({
 });
 
 const movieTitle = computed(() => props.movie?.title || 'Movie');
+const authorSuggestions = computed(() => {
+  const normalizedToOriginal = new Map();
+  reviews.value.forEach((review) => {
+    const normalized = `${review?.authorAlias || ''}`.trim();
+    if (!normalized) {
+      return;
+    }
+    const key = normalized.toLocaleLowerCase();
+    if (!normalizedToOriginal.has(key)) {
+      normalizedToOriginal.set(key, normalized);
+    }
+  });
+  return Array.from(normalizedToOriginal.values()).sort((a, b) =>
+    a.localeCompare(b, undefined, { sensitivity: 'base' })
+  );
+});
 
 watch(
   () => [props.modelValue, props.movie?.id],

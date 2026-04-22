@@ -153,7 +153,7 @@ public class MovieService {
             String direction,
             boolean nativeQuery) {
         return movieServiceProvider.getObject()
-                .searchAdvanced(new MovieSearchParams("", "", "", "", page, size, sort, direction, nativeQuery));
+                .searchAdvanced(new MovieSearchParams("", "", "", "", "", page, size, sort, direction, nativeQuery));
     }
 
     public List<MovieResponseDto> getAllNPlusOneDemo() {
@@ -241,6 +241,7 @@ public class MovieService {
 
         String normalizedTitle = normalizeTitle(searchParams.getTitle());
         String normalizedDirectorLastName = normalizeTextFilter(searchParams.getDirectorLastName());
+        String normalizedDirectorFirstName = normalizeTextFilter(searchParams.getDirectorFirstName());
         String normalizedGenreName = normalizeTextFilter(searchParams.getGenreName());
         String normalizedStudioTitle = normalizeTextFilter(searchParams.getStudioTitle());
         int normalizedPage = PagingSortingUtils.normalizePage(searchParams.getPage(), DEFAULT_PAGE);
@@ -254,6 +255,7 @@ public class MovieService {
         MovieSearchKey key = new MovieSearchKey(
                 normalizedTitle,
                 normalizedDirectorLastName,
+                normalizedDirectorFirstName,
                 normalizedGenreName,
                 normalizedStudioTitle,
                 new MovieSearchKey.PagingOptions(
@@ -266,10 +268,11 @@ public class MovieService {
         Page<MovieResponseDto> cachedPage = movieSearchCache.get(key);
         if (cachedPage != null) {
             log.info(
-                    "CACHE HIT: title='{}', director='{}', genre='{}', studio='{}', page={}, size={}, sort='{}',"
-                            + " direction='{}', native={}",
+                    "CACHE HIT: title='{}', directorLast='{}', directorFirst='{}', genre='{}', studio='{}', "
+                            + "page={}, size={}, sort='{}', direction='{}', native={}",
                     normalizedTitle,
                     normalizedDirectorLastName,
+                    normalizedDirectorFirstName,
                     normalizedGenreName,
                     normalizedStudioTitle,
                     normalizedPage,
@@ -281,10 +284,12 @@ public class MovieService {
         }
 
         log.info(
-                "CACHE MISS: title='{}', director='{}', genre='{}', studio='{}', page={}, size={}, "
+                "CACHE MISS: title='{}', directorLast='{}', directorFirst='{}', genre='{}', studio='{}', page={}, "
+                        + "size={}, "
                         + "sort='{}', direction='{}', native={}",
                 normalizedTitle,
                 normalizedDirectorLastName,
+                normalizedDirectorFirstName,
                 normalizedGenreName,
                 normalizedStudioTitle,
                 normalizedPage,
@@ -526,6 +531,7 @@ public class MovieService {
     private Page<MovieResponseDto> loadSearchPage(MovieSearchKey key) {
         String normalizedTitle = key.titleNormalized();
         String normalizedDirectorLastName = key.directorLastNameNormalized();
+        String normalizedDirectorFirstName = key.directorFirstNameNormalized();
         String normalizedGenreName = key.genreNameNormalized();
         String normalizedStudioTitle = key.studioTitleNormalized();
         int normalizedPage = key.pagingOptions().page();
@@ -542,6 +548,7 @@ public class MovieService {
             movieSearchPage = movieRepository.searchAdvancedNative(
                     normalizedTitle,
                     normalizedDirectorLastName,
+                    normalizedDirectorFirstName,
                     normalizedGenreName,
                     normalizedStudioTitle,
                     normalizedSort,
@@ -555,13 +562,16 @@ public class MovieService {
             movieSearchPage = movieRepository.searchAdvancedJpql(
                     normalizedTitle,
                     normalizedDirectorLastName,
+                    normalizedDirectorFirstName,
                     normalizedGenreName,
                     normalizedStudioTitle,
                     pageable);
         }
         Map<Long, MovieRatingSummary> ratingSummaries =
-                loadRatingSummaries(movieSearchPage.getContent().stream().map(MovieRepository.MovieSearchRowProjection::getId)
-                        .toList());
+                loadRatingSummaries(
+                        movieSearchPage.getContent().stream()
+                                .map(MovieRepository.MovieSearchRowProjection::getId)
+                                .toList());
         return movieSearchPage.map(row -> toSearchResponseDto(row, ratingSummaries.get(row.getId())));
     }
 

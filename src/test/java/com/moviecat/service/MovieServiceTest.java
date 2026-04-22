@@ -199,28 +199,31 @@ class MovieServiceTest {
 
     @Test
     void searchAdvanced_shouldReturnCachedPage_whenCacheHit() {
-        MovieSearchParams params = new MovieSearchParams("title", "", "", "", 0, 10, "title", "asc", false);
+        MovieSearchParams params = new MovieSearchParams("title", "", "", "", "", 0, 10, "title", "asc", false);
         Page<MovieResponseDto> cached = new PageImpl<>(nn(List.of(new MovieResponseDto())));
         when(movieSearchCache.get(any(MovieSearchKey.class))).thenReturn(cached);
 
         Page<MovieResponseDto> result = movieService.searchAdvanced(params);
 
         assertSame(cached, result);
-        verify(movieRepository, never()).searchAdvancedJpql(anyString(), anyString(), anyString(), anyString(), any());
+        verify(movieRepository, never()).searchAdvancedJpql(
+                anyString(), anyString(), anyString(), anyString(), anyString(), any());
         verify(movieRepository, never()).searchAdvancedNative(anyString(), anyString(), anyString(), anyString(),
+                anyString(),
                 anyString(), anyString(), any());
     }
 
     @Test
     void searchAdvanced_shouldLoadWithJpqlAndCache_whenCacheMiss() {
-        MovieSearchParams params = new MovieSearchParams("  TITle ", " Nolan ", " sci-fi ", " warner ", -3, 500,
-                "YEAR", "DESC", false);
+        MovieSearchParams params = new MovieSearchParams("  TITle ", " Nolan ", " Christopher ", " sci-fi ",
+                " warner ", -3, 500, "YEAR", "DESC", false);
         when(movieSearchCache.get(any(MovieSearchKey.class))).thenReturn(null);
 
         MovieRepository.MovieSearchRowProjection row = projection(7L, "Interstellar");
         when(movieViewWriteBehindService.getPendingDelta(7L)).thenReturn(5L);
         Page<MovieRepository.MovieSearchRowProjection> repoPage = new PageImpl<>(nn(List.of(row)));
-        when(movieRepository.searchAdvancedJpql(anyString(), anyString(), anyString(), anyString(), any(Pageable.class)))
+        when(movieRepository.searchAdvancedJpql(
+                anyString(), anyString(), anyString(), anyString(), anyString(), any(Pageable.class)))
                 .thenReturn(repoPage);
         when(reviewRepository.summarizeRatingsByMovieIds(List.of(7L)))
                 .thenReturn(List.of(ratingSummary(7L, 9.0, 12L)));
@@ -238,6 +241,7 @@ class MovieServiceTest {
         MovieSearchKey key = keyCaptor.getValue();
         assertEquals("title", key.titleNormalized());
         assertEquals("nolan", key.directorLastNameNormalized());
+        assertEquals("christopher", key.directorFirstNameNormalized());
         assertEquals("sci-fi", key.genreNameNormalized());
         assertEquals("warner", key.studioTitleNormalized());
         assertEquals(0, key.pagingOptions().page());
@@ -246,34 +250,40 @@ class MovieServiceTest {
         assertEquals("desc", key.pagingOptions().direction());
 
         verify(movieSearchCache).put(any(MovieSearchKey.class), eq(result));
-        verify(movieRepository).searchAdvancedJpql(anyString(), anyString(), anyString(), anyString(), any(Pageable.class));
+        verify(movieRepository).searchAdvancedJpql(
+                anyString(), anyString(), anyString(), anyString(), anyString(), any(Pageable.class));
         verify(movieRepository, never()).searchAdvancedNative(anyString(), anyString(), anyString(), anyString(),
+                anyString(),
                 anyString(), anyString(), any());
     }
 
     @Test
     void searchAdvanced_shouldUseNativeQuery_whenRequested() {
-        MovieSearchParams params = new MovieSearchParams("", "", "", "", 1, 20, "id", "asc", true);
+        MovieSearchParams params = new MovieSearchParams("", "", "", "", "", 1, 20, "id", "asc", true);
         when(movieSearchCache.get(any(MovieSearchKey.class))).thenReturn(null);
 
         MovieRepository.MovieSearchRowProjection row = projection(3L, "Tenet");
         Page<MovieRepository.MovieSearchRowProjection> repoPage = new PageImpl<>(nn(List.of(row)));
         when(movieRepository.searchAdvancedNative(anyString(), anyString(), anyString(), anyString(), anyString(),
+                anyString(),
                 anyString(), any(Pageable.class))).thenReturn(repoPage);
 
         Page<MovieResponseDto> result = movieService.searchAdvanced(params);
 
         assertEquals(1, result.getTotalElements());
         verify(movieRepository).searchAdvancedNative(anyString(), anyString(), anyString(), anyString(), anyString(),
+                anyString(),
                 anyString(), any(Pageable.class));
-        verify(movieRepository, never()).searchAdvancedJpql(anyString(), anyString(), anyString(), anyString(), any());
+        verify(movieRepository, never()).searchAdvancedJpql(
+                anyString(), anyString(), anyString(), anyString(), anyString(), any());
     }
 
     @Test
     void searchAdvanced_shouldNormalizeNullFilters() {
-        MovieSearchParams params = new MovieSearchParams(null, null, null, null, 0, 10, "title", "asc", false);
+        MovieSearchParams params = new MovieSearchParams(null, null, null, null, null, 0, 10, "title", "asc", false);
         when(movieSearchCache.get(any(MovieSearchKey.class))).thenReturn(null);
-        when(movieRepository.searchAdvancedJpql(anyString(), anyString(), anyString(), anyString(), any(Pageable.class)))
+        when(movieRepository.searchAdvancedJpql(
+                anyString(), anyString(), anyString(), anyString(), anyString(), any(Pageable.class)))
                 .thenReturn(Page.empty());
 
         movieService.searchAdvanced(params);
@@ -283,6 +293,7 @@ class MovieServiceTest {
         MovieSearchKey key = keyCaptor.getValue();
         assertEquals("", key.titleNormalized());
         assertEquals("", key.directorLastNameNormalized());
+        assertEquals("", key.directorFirstNameNormalized());
         assertEquals("", key.genreNameNormalized());
         assertEquals("", key.studioTitleNormalized());
     }
@@ -853,6 +864,8 @@ class MovieServiceTest {
         verify(spyService).searchAdvanced(paramsCaptor.capture());
         MovieSearchParams params = paramsCaptor.getValue();
         assertEquals("", params.getTitle());
+        assertEquals("", params.getDirectorLastName());
+        assertEquals("", params.getDirectorFirstName());
         assertEquals(2, params.getPage());
         assertEquals(15, params.getSize());
         assertEquals("year", params.getSort());

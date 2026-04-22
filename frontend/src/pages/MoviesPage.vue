@@ -1,97 +1,109 @@
 <template>
-  <section>
+  <section class="movies-page">
     <div class="page-head">
       <div>
         <h2>Movies</h2>
+        <p>Browse, filter and manage the movie catalog.</p>
       </div>
-      <button class="btn-primary" type="button" @click="openCreateMovie">Create movie</button>
-    </div>
+      <div class="page-head-actions">
+        <div class="list-toolbar list-toolbar--movies page-head-toolbar">
+          <div class="list-toolbar-summary">
+            <span class="list-toolbar-label">Sort by</span>
+            <strong>{{ currentSortLabel }}</strong>
+          </div>
 
-    <div class="list-toolbar list-toolbar--movies">
-      <div class="list-toolbar-summary">
-        <span class="list-toolbar-label">Sort by</span>
-        <strong>{{ currentSortLabel }}</strong>
-      </div>
+          <div class="field list-toolbar-field movies-page-size-field">
+            <label for="movies-size">Page size</label>
+            <SuggestInput
+              id="movies-size"
+              v-model="sizeInput"
+              :suggestions="sizeSuggestions"
+              placeholder="10"
+              @blur="applyDisplaySettings"
+            />
+          </div>
+        </div>
 
-      <div class="field list-toolbar-field">
-        <label for="movies-direction">Direction</label>
-        <SuggestInput
-          id="movies-direction"
-          v-model="directionInput"
-          :suggestions="directionSuggestions"
-          placeholder="asc"
-          @blur="applyDisplaySettings"
-        />
-      </div>
-
-      <div class="field list-toolbar-field">
-        <label for="movies-size">Page size</label>
-        <SuggestInput
-          id="movies-size"
-          v-model="sizeInput"
-          :suggestions="sizeSuggestions"
-          placeholder="10"
-          @blur="applyDisplaySettings"
-        />
+        <button class="btn-primary page-head-action-button" type="button" @click="openCreateMovie">
+          Create movie
+        </button>
       </div>
     </div>
 
     <div class="movies-layout">
       <aside class="movies-sidebar">
-        <div class="sidebar-card">
+        <div class="sidebar-card movies-filters-card">
           <h3>Filters</h3>
-          <div class="field">
-            <label for="filter-title">Title</label>
-            <SuggestInput
-              id="filter-title"
-              v-model="filters.title"
-              :suggestions="movieTitleHints"
-              placeholder="Interstellar"
-              @blur="applyFilters"
-            />
-          </div>
+          <form class="movies-filters-form" @submit.prevent="applyFilters">
+            <div class="field">
+              <label for="filter-title">Title</label>
+              <SuggestInput
+                id="filter-title"
+                v-model="filters.title"
+                :suggestions="movieTitleHints"
+                placeholder="Interstellar"
+              />
+            </div>
 
-          <div class="field">
-            <label for="filter-director">Director last name</label>
-            <SuggestInput
-              id="filter-director"
-              v-model="filters.directorLastName"
-              :suggestions="directorLastNameHints"
-              placeholder="Nolan"
-              @blur="applyFilters"
-            />
-          </div>
+            <div class="field">
+              <label for="filter-director-last-name">Director last name</label>
+              <SuggestInput
+                id="filter-director-last-name"
+                v-model="filters.directorLastName"
+                :suggestions="directorLastNameHints"
+                placeholder="Nolan"
+              />
+            </div>
 
-          <div class="field">
-            <label for="filter-genre">Genre</label>
-            <SuggestInput
-              id="filter-genre"
-              v-model="filters.genreName"
-              :suggestions="genreNameHints"
-              placeholder="Sci-Fi"
-              @blur="applyFilters"
-            />
-          </div>
+            <div class="field">
+              <label for="filter-director-first-name">Director first name</label>
+              <SuggestInput
+                id="filter-director-first-name"
+                v-model="filters.directorFirstName"
+                :suggestions="directorFirstNameHints"
+                placeholder="Christopher"
+              />
+            </div>
 
-          <div class="field">
-            <label for="filter-studio">Studio</label>
-            <SuggestInput
-              id="filter-studio"
-              v-model="filters.studioTitle"
-              :suggestions="studioTitleHints"
-              placeholder="Warner"
-              @blur="applyFilters"
-            />
-          </div>
+            <div class="field">
+              <label for="filter-genre">Genre</label>
+              <SuggestInput
+                id="filter-genre"
+                v-model="filters.genreName"
+                :suggestions="genreNameHints"
+                placeholder="Sci-Fi"
+              />
+            </div>
 
-          <div class="form-row sidebar-actions">
-            <button class="btn-outline" type="button" @click="resetFilters">Reset</button>
-          </div>
+            <div class="field">
+              <label for="filter-studio">Studio</label>
+              <SuggestInput
+                id="filter-studio"
+                v-model="filters.studioTitle"
+                :suggestions="studioTitleHints"
+                placeholder="Warner"
+              />
+            </div>
+
+            <div class="form-row sidebar-actions">
+              <button class="btn-primary" type="submit">Apply</button>
+              <button class="btn-outline" type="button" @click="resetFilters">Reset</button>
+            </div>
+          </form>
         </div>
+
       </aside>
 
       <div class="movies-main">
-        <div class="table-wrap">
+        <PaginationBar
+          class="movies-pagination movies-pagination--top"
+          :page="paging.page"
+          :total-pages="paging.totalPages"
+          :total-elements="paging.totalElements"
+          @change="loadMovies"
+        />
+
+        <div class="table-wrap table-wrap--responsive">
           <table class="table table--movies">
             <colgroup>
               <col class="table-col-poster" />
@@ -176,23 +188,23 @@
                 @keydown.enter.prevent="openMovieDetails(movie.id)"
                 @keydown.space.prevent="openMovieDetails(movie.id)"
               >
-                <td class="table-cell-center table-cell-poster">
+                <td class="table-cell-center table-cell-poster" data-label="Poster">
                   <img class="poster-thumb" :src="posterUrl(movie.posterUrl)" :alt="movie.title" />
                 </td>
-                <td>
+                <td data-label="Title">
                   <div class="movie-title-cell">
                     <strong>{{ movie.title }}</strong>
                     <div class="movie-title-meta">Views: {{ movie.viewCount }}</div>
                   </div>
                 </td>
-                <td class="table-cell-center">{{ movie.year }}</td>
-                <td class="table-cell-center">
+                <td class="table-cell-center" data-label="Year">{{ movie.year }}</td>
+                <td class="table-cell-center" data-label="Rating">
                   <div class="movie-rating-cell" :class="{ 'is-empty': !movie.reviewCount }">
                     <strong class="movie-rating-value">{{ formatRating(movie) }}</strong>
                     <span class="movie-rating-note">{{ formatReviewCount(movie) }}</span>
                   </div>
                 </td>
-                <td>
+                <td data-label="Director">
                   <button
                     v-if="movie.directorLastName"
                     class="movie-filter-link"
@@ -203,7 +215,7 @@
                   </button>
                   <span v-else>—</span>
                 </td>
-                <td>
+                <td data-label="Studio">
                   <button
                     v-if="movie.studioTitle"
                     class="movie-filter-link"
@@ -214,7 +226,7 @@
                   </button>
                   <span v-else>—</span>
                 </td>
-                <td>
+                <td data-label="Genres">
                   <div class="chips">
                     <button
                       v-for="genre in movie.genres || []"
@@ -228,7 +240,7 @@
                     <span v-if="!(movie.genres || []).length" style="color: var(--ink-muted)">—</span>
                   </div>
                 </td>
-                <td class="table-cell-actions">
+                <td class="table-cell-actions" data-label="Actions">
                   <div class="table-actions table-actions--icon">
                     <button
                       class="icon-action-button"
@@ -259,14 +271,15 @@
                   </div>
                 </td>
               </tr>
-              <tr v-if="movies.length === 0 && !loading">
-                <td colspan="8">No movies found.</td>
+              <tr v-if="movies.length === 0 && !loading" class="table-empty-row">
+                <td class="table-empty" colspan="8">No movies found.</td>
               </tr>
             </tbody>
           </table>
         </div>
 
         <PaginationBar
+          class="movies-pagination"
           :page="paging.page"
           :total-pages="paging.totalPages"
           :total-elements="paging.totalElements"
@@ -284,6 +297,9 @@
       :genres="genres"
       :studios="studios"
       :title-suggestions="movieTitleHints"
+      :year-suggestions="movieYearHints"
+      :duration-suggestions="movieDurationHints"
+      :view-count-suggestions="movieViewCountHints"
       :loading="movieFormLoading"
       :error-message="movieFormError"
       @submit="submitMovie"
@@ -352,6 +368,7 @@ const errorMessage = ref('');
 const filters = reactive({
   title: '',
   directorLastName: '',
+  directorFirstName: '',
   genreName: '',
   studioTitle: ''
 });
@@ -378,16 +395,37 @@ const deleteMovieMessage = ref('');
 const posterModalVisible = ref(false);
 const posterMovie = ref(null);
 
-const allMovieTitles = ref([]);
+const allMovieSuggestionSource = ref([]);
 
 const movieTitleHints = computed(() =>
   uniqueTextValues([
-    ...allMovieTitles.value,
+    ...allMovieSuggestionSource.value.map((movie) => movie.title),
     ...movies.value.map((movie) => movie.title)
+  ])
+);
+const movieYearHints = computed(() =>
+  uniqueTextValues([
+    ...allMovieSuggestionSource.value.map((movie) => `${movie.year || ''}`),
+    ...movies.value.map((movie) => `${movie.year || ''}`)
+  ])
+);
+const movieDurationHints = computed(() =>
+  uniqueTextValues([
+    ...allMovieSuggestionSource.value.map((movie) => `${movie.duration || ''}`),
+    ...movies.value.map((movie) => `${movie.duration || ''}`)
+  ])
+);
+const movieViewCountHints = computed(() =>
+  uniqueTextValues([
+    ...allMovieSuggestionSource.value.map((movie) => `${movie.viewCount ?? ''}`),
+    ...movies.value.map((movie) => `${movie.viewCount ?? ''}`)
   ])
 );
 const directorLastNameHints = computed(() =>
   uniqueTextValues(directors.value.map((director) => director.lastName))
+);
+const directorFirstNameHints = computed(() =>
+  uniqueTextValues(directors.value.map((director) => director.firstName))
 );
 const genreNameHints = computed(() =>
   uniqueTextValues(genres.value.map((genre) => genre.name))
@@ -395,7 +433,6 @@ const genreNameHints = computed(() =>
 const studioTitleHints = computed(() =>
   uniqueTextValues(studios.value.map((studio) => studio.title))
 );
-const directionSuggestions = ['asc', 'desc'];
 const sizeSuggestions = ['5', '10', '20'];
 const movieSortLabels = {
   title: 'Title',
@@ -407,13 +444,6 @@ const movieSortLabels = {
   id: 'ID'
 };
 const currentSortLabel = computed(() => sortLabel(paging.sort, movieSortLabels));
-
-const directionInput = computed({
-  get: () => paging.direction,
-  set: (value) => {
-    paging.direction = `${value || ''}`.trim();
-  }
-});
 
 const sizeInput = computed({
   get: () => `${paging.size}`,
@@ -499,9 +529,9 @@ async function loadMovieTitleHints() {
       })
     );
 
-    allMovieTitles.value = allMovies.map((movie) => movie.title).filter(Boolean);
+    allMovieSuggestionSource.value = allMovies;
   } catch {
-    allMovieTitles.value = [];
+    allMovieSuggestionSource.value = [];
   }
 }
 
@@ -509,6 +539,7 @@ function applyFiltersFromQuery(query) {
   const nextFilters = readMovieFiltersFromQuery(query);
   filters.title = nextFilters.title;
   filters.directorLastName = nextFilters.directorLastName;
+  filters.directorFirstName = nextFilters.directorFirstName;
   filters.genreName = nextFilters.genreName;
   filters.studioTitle = nextFilters.studioTitle;
 }
@@ -621,6 +652,7 @@ async function loadAllItems(fetchPage) {
 function resetFilters() {
   filters.title = '';
   filters.directorLastName = '';
+  filters.directorFirstName = '';
   filters.genreName = '';
   filters.studioTitle = '';
   applyFilters();

@@ -3,6 +3,7 @@ package com.moviecat.service.cache;
 public record MovieSearchKey(
         String titleNormalized,
         String directorLastNameNormalized,
+        String directorFirstNameNormalized,
         String genreNameNormalized,
         String studioTitleNormalized,
         PagingOptions pagingOptions,

@@ -1,0 +1,21 @@
+name: Push Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  lint:
+    uses: ./.github/workflows/lint.yaml
+
+  test:
+    uses: ./.github/workflows/test.yaml
+
+  build:
+    needs:
+      - lint
+      - test
+    uses: ./.github/workflows/build.yaml

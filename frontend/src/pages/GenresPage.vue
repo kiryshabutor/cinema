@@ -4,39 +4,32 @@
       <div>
         <h2>Genres</h2>
       </div>
-      <button class="btn-primary" type="button" @click="openCreate">Create genre</button>
-    </div>
+      <div class="page-head-actions">
+        <div class="list-toolbar page-head-toolbar">
+          <div class="list-toolbar-summary">
+            <span class="list-toolbar-label">Sort by</span>
+            <strong>{{ currentSortLabel }}</strong>
+          </div>
 
-    <div class="list-toolbar">
-      <div class="list-toolbar-summary">
-        <span class="list-toolbar-label">Sort by</span>
-        <strong>{{ currentSortLabel }}</strong>
-      </div>
+          <div class="field list-toolbar-field">
+            <label for="genres-size">Page size</label>
+            <SuggestInput
+              id="genres-size"
+              v-model="sizeInput"
+              :suggestions="sizeSuggestions"
+              placeholder="10"
+              @blur="applyTableSettings"
+            />
+          </div>
+        </div>
 
-      <div class="field list-toolbar-field">
-        <label for="genres-direction">Direction</label>
-        <SuggestInput
-          id="genres-direction"
-          v-model="directionInput"
-          :suggestions="directionSuggestions"
-          placeholder="asc"
-          @blur="applyTableSettings"
-        />
-      </div>
-
-      <div class="field list-toolbar-field">
-        <label for="genres-size">Page size</label>
-        <SuggestInput
-          id="genres-size"
-          v-model="sizeInput"
-          :suggestions="sizeSuggestions"
-          placeholder="10"
-          @blur="applyTableSettings"
-        />
+        <button class="btn-primary page-head-action-button" type="button" @click="openCreate">
+          Create genre
+        </button>
       </div>
     </div>
 
-    <div class="table-wrap">
+    <div class="table-wrap table-wrap--responsive">
       <table class="table table--entity">
         <colgroup>
           <col class="table-col-id" />
@@ -72,13 +65,13 @@
         </thead>
         <tbody>
           <tr v-for="genre in genres" :key="genre.id">
-            <td class="table-cell-center">{{ genre.id }}</td>
-            <td>
+            <td class="table-cell-center" data-label="ID">{{ genre.id }}</td>
+            <td data-label="Name">
               <RouterLink class="movie-filter-link" :to="genreMoviesLocation(genre)">
                 {{ genre.name }}
               </RouterLink>
             </td>
-            <td class="table-cell-actions">
+            <td class="table-cell-actions" data-label="Actions">
               <div class="table-actions table-actions--icon">
                 <button
                   class="icon-action-button"
@@ -109,8 +102,8 @@
               </div>
             </td>
           </tr>
-          <tr v-if="genres.length === 0 && !loading">
-            <td colspan="3">No genres found.</td>
+          <tr v-if="genres.length === 0 && !loading" class="table-empty-row">
+            <td class="table-empty" colspan="3">No genres found.</td>
           </tr>
         </tbody>
       </table>
@@ -168,20 +161,12 @@ const paging = reactive({
   totalElements: 0
 });
 
-const directionSuggestions = ['asc', 'desc'];
 const sizeSuggestions = ['5', '10', '20'];
 const genreSortLabels = {
   id: 'ID',
   name: 'Name'
 };
 const currentSortLabel = computed(() => sortLabel(paging.sort, genreSortLabels));
-
-const directionInput = computed({
-  get: () => paging.direction,
-  set: (value) => {
-    paging.direction = `${value || ''}`.trim();
-  }
-});
 
 const sizeInput = computed({
   get: () => `${paging.size}`,

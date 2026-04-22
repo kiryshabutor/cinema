@@ -3,12 +3,24 @@
     <form @submit.prevent="submit">
       <div class="field">
         <label for="review-author">Author alias</label>
-        <input id="review-author" v-model.trim="form.authorAlias" maxlength="120" required />
+        <SuggestInput
+          id="review-author"
+          v-model="form.authorAlias"
+          :suggestions="authorSuggestions"
+          maxlength="120"
+          required
+        />
       </div>
 
       <div class="field" style="margin-top: 10px">
         <label for="review-rating">Rating (1..10)</label>
-        <input id="review-rating" v-model.number="form.rating" type="number" min="1" max="10" required />
+        <SuggestInput
+          id="review-rating"
+          v-model="ratingInput"
+          :suggestions="ratingSuggestions"
+          placeholder="8"
+          required
+        />
       </div>
 
       <div class="field" style="margin-top: 10px">
@@ -29,11 +41,13 @@
 </template>
 
 <script setup>
-import { reactive, watch } from 'vue';
+import { computed, reactive, watch } from 'vue';
 import BaseModal from './BaseModal.vue';
+import SuggestInput from './SuggestInput.vue';
 
 const props = defineProps({
   modelValue: { type: Boolean, required: true },
+  authorSuggestions: { type: Array, default: () => [] },
   loading: { type: Boolean, default: false },
   errorMessage: { type: String, default: '' }
 });
@@ -44,6 +58,17 @@ const form = reactive({
   authorAlias: '',
   rating: 8,
   comment: ''
+});
+
+const ratingSuggestions = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
+const ratingInput = computed({
+  get: () => `${form.rating ?? ''}`,
+  set: (value) => {
+    const parsed = Number.parseInt(`${value || ''}`.trim(), 10);
+    if (Number.isFinite(parsed)) {
+      form.rating = parsed;
+    }
+  }
 });
 
 watch(
@@ -61,7 +86,7 @@ watch(
 
 function submit() {
   emit('submit', {
-    authorAlias: form.authorAlias,
+    authorAlias: form.authorAlias.trim(),
     rating: Number(form.rating),
     comment: form.comment || null
   });

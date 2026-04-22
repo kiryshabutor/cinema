@@ -1,0 +1,36 @@
+name: Render Health Check
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    env:
+      RENDER_HEALTHCHECK_URL: ${{ vars.RENDER_HEALTHCHECK_URL }}
+
+    steps:
+      - name: Check deployed service health
+        run: |
+          if [ -z "${RENDER_HEALTHCHECK_URL}" ]; then
+            echo "::warning::RENDER_HEALTHCHECK_URL repository variable is not set. Skipping health check."
+            exit 0
+          fi
+
+          curl \
+            --fail \
+            --silent \
+            --show-error \
+            --location \
+            --retry 12 \
+            --retry-delay 10 \
+            --retry-connrefused \
+            --max-time 180 \
+            "${RENDER_HEALTHCHECK_URL}"
+
+          echo "Render service is healthy."

@@ -1,11 +1,11 @@
 <template>
   <div class="pagination">
-    <div>
+    <div class="pagination-status">
       <strong>Page {{ page + 1 }}</strong>
       <span> / {{ totalPages || 1 }}</span>
       <span v-if="totalElements !== null"> • Total: {{ totalElements }}</span>
     </div>
-    <div class="form-row">
+    <div class="form-row pagination-actions">
       <button class="btn-outline" type="button" :disabled="page <= 0" @click="$emit('change', page - 1)">
         Prev
       </button>

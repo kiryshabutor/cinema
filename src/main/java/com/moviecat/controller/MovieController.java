@@ -109,13 +109,15 @@ public class MovieController {
     @GetMapping("/search")
     @Operation(
             summary = "Advanced movie search",
-            description = "Search by title, director last name, genre name and studio title "
+            description = "Search by title, director last name, director first name, genre name and studio title "
                     + "with pagination and sorting.")
     public ResponseEntity<Page<MovieResponseDto>> searchAdvanced(
             @Parameter(description = "Title filter (contains, case-insensitive)")
             @RequestParam(required = false) String title,
             @Parameter(description = "Director last name filter (contains, case-insensitive)")
             @RequestParam(required = false) String directorLastName,
+            @Parameter(description = "Director first name filter (contains, case-insensitive)")
+            @RequestParam(required = false) String directorFirstName,
             @Parameter(description = "Genre name filter (contains, case-insensitive)")
             @RequestParam(required = false) String genreName,
             @Parameter(description = "Studio title filter (contains, case-insensitive)")
@@ -136,6 +138,7 @@ public class MovieController {
         return ResponseEntity.ok(movieService.searchAdvanced(new MovieSearchParams(
                 title,
                 directorLastName,
+                directorFirstName,
                 genreName,
                 studioTitle,
                 page,
