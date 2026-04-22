@@ -1,6 +1,7 @@
 name: Render Health Check
 
 on:
+  workflow_call:
   schedule:
     - cron: "*/30 * * * *"
   workflow_dispatch:
@@ -27,7 +28,7 @@ jobs:
             --silent \
             --show-error \
             --location \
-            --retry 12 \
+            --retry 30 \
             --retry-delay 10 \
             --retry-connrefused \
             --max-time 180 \

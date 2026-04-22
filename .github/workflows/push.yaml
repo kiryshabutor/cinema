@@ -12,10 +12,23 @@ jobs:
     uses: ./.github/workflows/lint.yaml
 
   test:
+    needs: lint
     uses: ./.github/workflows/test.yaml
 
   build:
-    needs:
-      - lint
-      - test
+    needs: test
     uses: ./.github/workflows/build.yaml
+
+  sonar:
+    needs: build
+    uses: ./.github/workflows/sonar.yml
+    secrets: inherit
+
+  deploy:
+    needs: sonar
+    uses: ./.github/workflows/deploy.yaml
+    secrets: inherit
+
+  health:
+    needs: deploy
+    uses: ./.github/workflows/health.yaml
