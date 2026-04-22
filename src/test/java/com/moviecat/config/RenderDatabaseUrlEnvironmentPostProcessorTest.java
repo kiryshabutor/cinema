@@ -18,7 +18,7 @@ class RenderDatabaseUrlEnvironmentPostProcessorTest {
 
         postProcessor.postProcessEnvironment(environment, new SpringApplication());
 
-        assertEquals("jdbc:postgresql://user:pass@host:5432/db", environment.getProperty("spring.datasource.url"));
+        assertEquals("jdbc:postgresql://host:5432/db", environment.getProperty("spring.datasource.url"));
         assertEquals("user", environment.getProperty("spring.datasource.username"));
         assertEquals("pass", environment.getProperty("spring.datasource.password"));
     }
@@ -30,7 +30,7 @@ class RenderDatabaseUrlEnvironmentPostProcessorTest {
 
         postProcessor.postProcessEnvironment(environment, new SpringApplication());
 
-        assertEquals("jdbc:postgresql://user:pass@host:5432/db", environment.getProperty("spring.datasource.url"));
+        assertEquals("jdbc:postgresql://host:5432/db", environment.getProperty("spring.datasource.url"));
         assertEquals("user", environment.getProperty("spring.datasource.username"));
         assertEquals("pass", environment.getProperty("spring.datasource.password"));
     }
@@ -56,5 +56,18 @@ class RenderDatabaseUrlEnvironmentPostProcessorTest {
 
         assertEquals("explicit-user", environment.getProperty("spring.datasource.username"));
         assertEquals("explicit-password", environment.getProperty("spring.datasource.password"));
+    }
+
+    @Test
+    void shouldNotOverrideExplicitJdbcUrlWhenRenderDatabaseUrlExists() {
+        MockEnvironment environment = new MockEnvironment()
+                .withProperty("spring.datasource.url", "jdbc:postgresql://explicit-host:5432/explicit-db")
+                .withProperty("RENDER_DATABASE_URL", "postgresql://user:pass@host:5432/db");
+
+        postProcessor.postProcessEnvironment(environment, new SpringApplication());
+
+        assertEquals(
+                "jdbc:postgresql://explicit-host:5432/explicit-db",
+                environment.getProperty("spring.datasource.url"));
     }
 }

@@ -29,7 +29,7 @@ public class RenderDatabaseUrlEnvironmentPostProcessor implements EnvironmentPos
             return;
         }
 
-        if (renderDatabaseUrl != null && renderDatabaseUrl.startsWith(POSTGRES_SCHEME)) {
+        if (isBlank(configuredUrl) && renderDatabaseUrl != null && renderDatabaseUrl.startsWith(POSTGRES_SCHEME)) {
             applyDatabaseProperties(environment, renderDatabaseUrl, true);
         }
     }
@@ -37,9 +37,8 @@ public class RenderDatabaseUrlEnvironmentPostProcessor implements EnvironmentPos
     private void applyDatabaseProperties(
             ConfigurableEnvironment environment, String databaseUrl, boolean fillMissingCredentialsOnly) {
         Map<String, Object> overrides = new LinkedHashMap<>();
-        overrides.put(DATASOURCE_URL_KEY, JDBC_POSTGRES_SCHEME + databaseUrl.substring(POSTGRES_SCHEME.length()));
-
         URI uri = URI.create(databaseUrl);
+        overrides.put(DATASOURCE_URL_KEY, buildJdbcUrl(uri));
         String userInfo = uri.getUserInfo();
         if (userInfo == null || userInfo.isBlank()) {
             environment.getPropertySources().addFirst(new MapPropertySource(PROPERTY_SOURCE_NAME, overrides));
@@ -58,6 +57,26 @@ public class RenderDatabaseUrlEnvironmentPostProcessor implements EnvironmentPos
         }
 
         environment.getPropertySources().addFirst(new MapPropertySource(PROPERTY_SOURCE_NAME, overrides));
+    }
+
+    private String buildJdbcUrl(URI uri) {
+        String host = uri.getHost();
+        int port = uri.getPort();
+        String path = uri.getRawPath();
+        String query = uri.getRawQuery();
+
+        StringBuilder jdbcUrl = new StringBuilder(JDBC_POSTGRES_SCHEME);
+        jdbcUrl.append(host);
+        if (port > 0) {
+            jdbcUrl.append(':').append(port);
+        }
+        if (path != null) {
+            jdbcUrl.append(path);
+        }
+        if (query != null && !query.isBlank()) {
+            jdbcUrl.append('?').append(query);
+        }
+        return jdbcUrl.toString();
     }
 
     private boolean isBlank(String value) {
